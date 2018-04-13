@@ -1,9 +1,10 @@
 Tiger's Build - 2018-04-13
 ---------------------------------
 - CD chat box text is now orange, deal with it. (and blame Kore for giving me the idea)
-	I will be adding an option to configure this in the near future)
-- Rewrote a large amount of my code to be more compatible with Blackout's version of CD
+	I will be adding an option to configure this in the near future
 - closed my pull request for GSO_V1 to CD master branch (The PR has been open for months, I've given up on it.)
+- Rewrote a large amount of my code to be more compatible with Blackout's mainline version of CD
+- Reworked !cdwho output
 - Moved my Build's source from Google drive to GitHub
 - added !cdwaveendsummaries and !cdwes chat commands to toggle their display
 - added WaveEndSummaries to config options to toggle their display
