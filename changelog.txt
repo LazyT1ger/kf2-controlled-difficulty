@@ -1,3 +1,60 @@
+Tiger's Build - 2018-04-13
+---------------------------------
+- CD chat box text is now orange, deal with it. (and blame Kore for giving me the idea)
+	I will be adding an option to configure this in the near future)
+- Rewrote a large amount of my code to be more compatible with Blackout's version of CD
+- closed my pull request for GSO_V1 to CD master branch (The PR has been open for months, I've given up on it.)
+- Moved my Build's source from Google drive to GitHub
+- added !cdwaveendsummaries and !cdwes chat commands to toggle their display
+- added WaveEndSummaries to config options to toggle their display
+- added !cdusereadysystem and !cdurs chat commands to toggle Ready System functionality
+- added UseReadySystem to config option to toggle Ready System functionality
+- fixed a bug where Boss Cinematics could break or get 'stuck' on screen.
+- potentially fixed a bug where players joining during trader time would trigger TWI's delayed login and cause it to take ~30 seconds to actually spawn in.
+
+
+Tiger's Build - 2018-04-11
+---------------------------------
+- added Spawncycle Preset Nam_Pro_v5_Plus
+- added !cdmystats and !cdms chat commands
+- added !cdallhpfakes and !cdahpf chat commands
+- fixed a bug where a player could ready up while trader time was not paused
+- reformatted a large amount of my OTBS(K&R variant) code to Allman to be consistent with project (P.S. Allman sucks)
+- reduced evaluation required for some commands
+- updated versioning information for easier reference
+
+Tiger's Build - 2018-04-03
+---------------------------------
+- fixed an issue where GetPlayerNumMaxAIModifier() could pass the wrong value to GetEffectivePlayerCount()
+  which in turn disrupted calculations for wavesizefakes if fakesmode was set to add. 
+
+
+Tiger's Build - 2018-03-28
+---------------------------------
+- made ready and unready commands case insensitive
+- set TraderTime default value in config to 12 (will be helpful for clean installs)
+- added unready AutoPause notice
+- added !cdready chat command notification to initial autopause prompt
+- added/adjusted chat spaff to reduce confusion
+
+Tiger's Build - 2018-03-27
+---------------------------------
+- added AutoPause functionality
+- added !cdAutoPause and !cdap chat commands
+- added AutoPause boolean to config
+- added Ready System functionality
+- added !cdready, !cdr, !cdunready, and !cdur chat commands
+- added autopause on unready when time remaining is greater than 5 seconds
+- fixed !cdwho to no longer display faked players as spectators
+- fixed !cdwho to no longer display real players as spectators during trader time
+- fixed !cdwho to now correctly display spectators prior to the start of wave 1
+- added !cdwho functionality to correctly display readied up players during trader time
+- redundantly tied AutoPause time set to TraderTime set in config this may be removed in a future update
+- added gso_v1 spawncycle
+- includes Blackout's currently undocumented(here) updates to Red Dwarf Spawn Cycles
+- includes Blackout's currently undocumented(here) updates to be compatible with v1060, v1061, and v1062
+
+
 4218dda3 built 2016-11-18
 -------------------------
 
