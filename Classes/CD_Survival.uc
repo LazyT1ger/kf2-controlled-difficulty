@@ -450,11 +450,11 @@ var config ECDAuthLevel DefaultAuthLevel;
 var config string AutoPause;
 var bool bAutoPause;
 
-// #### UseReadySystem
+// #### EnableReadySystem
 //
 // Toggles ready system functionality.
-var config string UseReadySystem;
-var bool bUseReadySystem;
+var config string EnableReadySystem;
+var bool bEnableReadySystem;
 
 // #### TraderTime
 //
@@ -543,7 +543,7 @@ var CD_BasicSetting FakesModeSetting;
 var CD_BasicSetting FleshpoundRageSpawnsSetting;
 var CD_BasicSetting SpawnCycleSetting;
 var CD_BasicSetting TraderTimeSetting;
-var CD_BasicSetting UseReadySystemSetting;
+var CD_BasicSetting EnableReadySystemSetting;
 var CD_BasicSetting	WaveEndSummariesSetting;
 var CD_BasicSetting WeaponTimeoutSetting;
 var CD_BasicSetting ZedsTeleportCloserSetting;
@@ -682,8 +682,8 @@ private function SetupBasicSettings()
 	TraderTimeSetting = new(self) class'CD_BasicSetting_TraderTime';
 	RegisterBasicSetting( TraderTimeSetting );
 
-	UseReadySystemSetting = new(self) class'CD_BasicSetting_UseReadySystem';
-	RegisterBasicSetting( UseReadySystemSetting );
+	EnableReadySystemSetting = new(self) class'CD_BasicSetting_EnableReadySystem';
+	RegisterBasicSetting( EnableReadySystemSetting );
 	
 	WeaponTimeoutSetting = new(self) class'CD_BasicSetting_WeaponTimeout';
 	RegisterBasicSetting( WeaponTimeoutSetting );
@@ -1040,7 +1040,7 @@ private function ReadyUp(Actor Sender)
 	KFPC = KFPlayerController(Sender);
 	CDPC = CD_PlayerController(Sender);
 	
-	if (!bUseReadySystem)
+	if (!bEnableReadySystem)
 	{
 		BroadCastCDEcho( "The Ready system is currently disabled." );
 	}
@@ -1090,7 +1090,7 @@ private function Unready(Actor Sender)
 	KFPC = KFPlayerController(Sender);
 	CDPC = CD_PlayerController(Sender);
 	
-	if (!bUseReadySystem)
+	if (!bEnableReadySystem)
 	{
 		BroadCastCDEcho( "The Ready system is currently disabled." );
 	}
@@ -1563,7 +1563,7 @@ function WaveEnded( EWaveEndCondition WinCondition )
 		BroadcastCDEcho( PauseTraderTime() );
 	}
 	
-	if (bUseReadySystem && !MyKFGRI.IsBossWave() )
+	if (bEnableReadySystem && !MyKFGRI.IsBossWave() )
 	{
 		UnreadyAllPlayers();
 	}
