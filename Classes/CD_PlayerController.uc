@@ -11,7 +11,7 @@ var config int ChatLineThreshold;
 
 var config bool ClientLogging;
 
-
+var bool bIsReadyForNextWave;
 
 var CD_ConsolePrinter Client_CDCP;
 
@@ -130,5 +130,5 @@ reliable client event TeamMessage( PlayerReplicationInfo PRI, coerce string S, n
 defaultproperties
 {
 	MatchStatsClass=class'ControlledDifficulty.CD_EphemeralMatchStats'
-	CDEchoMessageColor="00DCCE"
+	CDEchoMessageColor="FFA500"
 }

@@ -437,10 +437,24 @@ var config array<StructAuthorizedUsers> AuthorizedUsers;
 // and anonymous users with CDAUTH_WRITE.
 var config ECDAuthLevel DefaultAuthLevel;
 
-
 //
 // ### Miscellaneous Settings
 //
+
+// #### AutoPause
+//
+// True will enable automatic trader time pause intended for use in conjunction
+// with cdready and cdunready commands. 
+// AutoPause occurs at the time specified by TraderTime.
+// False will disable autopause
+var config string AutoPause;
+var bool bAutoPause;
+
+// #### UseReadySystem
+//
+// Toggles ready system functionality.
+var config string UseReadySystem;
+var bool bUseReadySystem;
 
 // #### TraderTime
 //
@@ -448,6 +462,12 @@ var config ECDAuthLevel DefaultAuthLevel;
 // totally ignored, and the difficulty's standard trader time is used instead.
 var config string TraderTime;
 var int TraderTimeInt;
+
+// #### WaveEndSummaries
+//
+// used to toggle the display of wave-end summaries
+var config string WaveEndSummaries;
+var bool bWaveEndSummaries;
 
 // #### WeaponTimeout
 //
@@ -517,11 +537,14 @@ var array<CD_DynamicSetting> DynamicSettings;
 var CD_BasicSetting AlbinoAlphasSetting;
 var CD_BasicSetting AlbinoCrawlersSetting;
 var CD_BasicSetting AlbinoGorefastsSetting;
+var CD_BasicSetting AutoPauseSetting;
 var CD_BasicSetting BossSetting;
 var CD_BasicSetting FakesModeSetting;
 var CD_BasicSetting FleshpoundRageSpawnsSetting;
 var CD_BasicSetting SpawnCycleSetting;
 var CD_BasicSetting TraderTimeSetting;
+var CD_BasicSetting UseReadySystemSetting;
+var CD_BasicSetting	WaveEndSummariesSetting;
 var CD_BasicSetting WeaponTimeoutSetting;
 var CD_BasicSetting ZedsTeleportCloserSetting;
 var CD_BasicSetting ZTSpawnModeSetting;
@@ -637,7 +660,10 @@ private function SetupBasicSettings()
 
 	AlbinoGorefastsSetting = new(self) class'CD_BasicSetting_AlbinoGorefasts';
 	RegisterBasicSetting( AlbinoGorefastsSetting );
-
+	
+	AutoPauseSetting = new(self) class'CD_BasicSetting_AutoPause';
+	RegisterBasicSetting( AutoPauseSetting );
+	
 	BossSetting = new(self) class'CD_BasicSetting_Boss';
 	RegisterBasicSetting( BossSetting );
 
@@ -647,12 +673,18 @@ private function SetupBasicSettings()
 	FleshpoundRageSpawnsSetting = new(self) class'CD_BasicSetting_FleshpoundRageSpawns';
 	RegisterBasicSetting( FleshpoundRageSpawnsSetting );
 
+	WaveEndSummariesSetting = new(self) class'CD_BasicSetting_WaveEndSummaries';
+	RegisterBasicSetting( WaveEndSummariesSetting );
+	
 	SpawnCycleSetting = new(self) class'CD_BasicSetting_SpawnCycle';
 	RegisterBasicSetting( SpawnCycleSetting );
 
 	TraderTimeSetting = new(self) class'CD_BasicSetting_TraderTime';
 	RegisterBasicSetting( TraderTimeSetting );
 
+	UseReadySystemSetting = new(self) class'CD_BasicSetting_UseReadySystem';
+	RegisterBasicSetting( UseReadySystemSetting );
+	
 	WeaponTimeoutSetting = new(self) class'CD_BasicSetting_WeaponTimeout';
 	RegisterBasicSetting( WeaponTimeoutSetting );
 
@@ -895,7 +927,10 @@ private function DisplayBriefWaveStatsInChat()
 
 	s = CD_SpawnManager( SpawnManager ).GetWaveAverageSpawnrate();
 
-	BroadcastCDEcho( "[CD - Wave " $ WaveNum $ " Recap]\n"$ s );
+	if(bWaveEndSummaries)
+	{
+		BroadcastCDEcho( "[CD - Wave " $ WaveNum $ " Recap]\n"$ s );
+	}
 }
 
 State TraderOpen
@@ -990,6 +1025,212 @@ private function string UnpauseTraderTime()
 	return "Unpaused Trader";
 }
 
+// called by command to set a players ready state to ready.
+// if the planets align and we deem them worthy to ready up, do it
+// otherwise this just spaffs the reason why we won't ready them. 
+//
+// Extra sass has been provided free of charge.
+private function ReadyUp(Actor Sender)
+{
+	local KFPlayerController KFPC;
+	local CD_PlayerController CDPC;
+	local name GameStateName;
+	GameStateName = GetStateName();
+	
+	KFPC = KFPlayerController(Sender);
+	CDPC = CD_PlayerController(Sender);
+	
+	if (!bUseReadySystem)
+	{
+		BroadCastCDEcho( "The Ready system is currently disabled." );
+	}
+	else
+	{
+		if ( GameStateName != 'TraderOpen' )
+		{
+			BroadCastCDEcho( "That command can only be used during trader time." );
+		}
+		else if ( !MyKFGRI.bStopCountDown )
+		{
+			BroadCastCDEcho( "Trader not paused, You can't ready up." );
+		}
+		else if (KFPC.PlayerReplicationInfo.bOnlySpectator)
+		{
+			BroadCastCDEcho( "Command not available to spectators.");
+		}
+		else if (CDPC.bIsReadyForNextWave)
+		{
+			BroadCastCDEcho( "We get it, you're ready." );
+		}
+		else
+		{
+			CDPC.bIsReadyForNextWave = true;
+			BroadCastCDEcho( KFPC.PlayerReplicationInfo.PlayerName $ " has readied up." );
+			if( AllPlayersAreReady() )
+			{
+				BroadCastCDEcho( "All Players are ready. Unpausing Trader." );
+				UnpauseTraderTime();
+			}
+		}
+	}
+}
+
+
+// sets the ready state to false for the sent actor if they should be able to,
+// otherwise spaffs the reason why we won't unready them. 
+//
+// Extra sass has been provided free of charge.
+private function Unready(Actor Sender)
+{
+	local KFPlayerController KFPC;
+	local CD_PlayerController CDPC;
+	local name GameStateName;
+	GameStateName = GetStateName();
+
+	KFPC = KFPlayerController(Sender);
+	CDPC = CD_PlayerController(Sender);
+	
+	if (!bUseReadySystem)
+	{
+		BroadCastCDEcho( "The Ready system is currently disabled." );
+	}
+	else
+	{
+		if ( GameStateName != 'TraderOpen' )
+		{
+			BroadCastCDEcho( "That command can only be used during trader time." );
+		}
+		else if (KFPC.PlayerReplicationInfo.bOnlySpectator)
+		{
+			BroadCastCDEcho( "Command not available to spectators.");
+		}
+		else if (!CDPC.bIsReadyForNextWave)
+		{
+			BroadCastCDEcho( "You were not ready to begin with." );
+		}
+		else if (WorldInfo.NetMode != NM_StandAlone && MyKFGRI.RemainingTime <= 5)
+		{
+			BroadCastCDEcho( "Unready requires at least 5 seconds remaining." );
+		}
+		else
+		{
+			CDPC.bIsReadyForNextWave = false;
+			BroadCastCDEcho( KFPC.PlayerReplicationInfo.PlayerName $ " has unreadied." );
+			if ( !MyKFGRI.bStopCountDown )
+			{
+				PauseTraderTime();
+				BroadCastCDEcho("Countdown AutoPaused.");
+			}
+		}
+	}
+}
+
+// Tallies up players and returns true if all non-spectators are ready
+private function bool AllPlayersAreReady()
+{
+    local KFPlayerController KFPC;
+	local CD_PlayerController CDPC;
+    local int TotalPlayerCount;
+    local int SpectatorCount;
+    local int ReadyCount;
+	
+	TotalPlayerCount = 0;
+	SpectatorCount = 0;
+	ReadyCount = 0;
+	
+    foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+	{
+        CDPC = CD_PlayerController(KFPC);
+		
+		if ( !KFPC.bIsPlayer || KFPC.bDemoOwner )
+		{
+			continue;
+		}
+		else
+		{
+			TotalPlayerCount++;
+        }
+		       
+        if ( KFPC.PlayerReplicationInfo.bOnlySpectator )
+		{
+            SpectatorCount++;
+        }
+		else if ( CDPC.bIsReadyForNextWave && !KFPC.PlayerReplicationInfo.bOnlySpectator)
+		{
+            ReadyCount++;
+        }
+    }
+	
+    if (TotalPlayerCount == ReadyCount + SpectatorCount)
+	{
+		return true;
+    }
+	else
+	{
+		return false;
+	}
+}
+
+// sets all ReadySystem states for all non-spectators to unready when called
+private function UnreadyAllPlayers()
+{
+	local KFPlayerController KFPC;
+	local CD_PlayerController CDPC;
+	
+	foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+	{
+		if ( KFPC.bIsPlayer && !KFPC.PlayerReplicationInfo.bOnlySpectator && !KFPC.bDemoOwner )
+		{
+			CDPC = CD_PlayerController(KFPC);
+			CDPC.bIsReadyForNextWave = false;
+		}
+	}
+	
+	BroadcastCDEcho( "Type \"!cdready\" or \"!cdr\" to ready up for the next wave." );
+}
+
+/*
+ * called by !cdmystats command, since we can't use local vars in an event
+ * These stats are already collected for us through EphemeralMatchStats for GameConductor
+ * and end of match rewards so we might as well make them available to players on request.
+ */
+
+private function GetPlayerStats(Actor Sender)
+{
+	local KFPlayerController KFPC;
+	local string PlayerStats;
+	
+	local int DoshEarned;
+	local int HealsGiven;
+	local int HealsRecv;
+	local int DamageDealt;
+	local int DamageRecv;
+	
+	KFPC = KFPlayerController(Sender);
+	PlayerStats = "";
+	
+	if ( KFPlayerController(Sender) != none && !KFPC.PlayerReplicationInfo.bOnlySpectator)
+	{
+		DoshEarned = KFPC.MatchStats.TotalDoshEarned + KFPC.MatchStats.GetDoshEarnedInWave();
+		HealsGiven = KFPC.MatchStats.TotalAmountHealGiven + KFPC.MatchStats.GetHealGivenInWave();
+		HealsRecv  = KFPC.MatchStats.TotalAmountHealReceived + KFPC.MatchStats.GetHealReceivedInWave();
+		DamageDealt= KFPC.MatchStats.TotalDamageDealt + KFPC.MatchStats.GetDamageDealtInWave();
+		DamageRecv = KFPC.MatchStats.TotalDamageTaken + KFPC.MatchStats.GetDamageTakenInWave();
+		
+		PlayerStats = "Stats for " $ KFPC.PlayerReplicationInfo.PlayerName $ ": \n" $
+			"Dosh Earned:" $ DoshEarned $ "\n" $
+		    "Heals - Given: " $ HealsGiven $ " Received: " $ HealsRecv $ "\n" $
+			"Damage - Dealt: " $ DamageDealt $ " Taken: " $ DamageRecv $ "\n" $
+			"Shots - Fired: " $ KFPC.ShotsFired $ " Hit: " $ KFPC.ShotsHit $ " Headshots: " $ KFPC.ShotsHitHeadshot;
+			
+		BroadCastCDEcho( PlayerStats );
+	}
+	else if ( KFPC.PlayerReplicationInfo.bOnlySpectator ) 
+	{	// Provide obligatory sass to people using this command when they shouldn't.
+		BroadCastCDEcho( "You've spectated really hard, but that doesn't count for anything." );
+	}
+}
+
 /* 
  * We override PreLogin to disable a comically overzealous
  * GameMode integrity check added in v1046 or v1048 (not
@@ -1019,35 +1260,7 @@ event PreLogin(string Options, string Address, const UniqueNetId UniqueId, bool 
 		return;
 	}
 
-//	// Check against what is expected from the client in the case of quick join/server browser. The server settings can change from the time the server gets the properties from the backend
-//	if( WorldInfo.NetMode == NM_DedicatedServer && !HasOption( Options, "bJoinViaInvite" ) )
-//	{
-//		DesiredDifficulty = ParseOption( Options, "Difficulty" );
-//		if( DesiredDifficulty != "" && int(DesiredDifficulty) != GameDifficulty )
-//		{
-//			`log("Got bad difficulty"@DesiredDifficulty@"expected"@GameDifficulty);
-//			ErrorMessage = "<Strings:KFGame.KFLocalMessage.ServerNoLongerAvailableString>";
-//			return;
-//		}
-//
-//		DesiredWaveLength = ParseOption( Options, "GameLength" );
-//		if( DesiredWaveLength != "" && int(DesiredWaveLength) != GameLength )
-//		{
-//			`log("Got bad wave length"@DesiredWaveLength@"expected"@GameLength);
-//			ErrorMessage = "<Strings:KFGame.KFLocalMessage.ServerNoLongerAvailableString>";
-//			return;
-//		}
-//
-//		DesiredGameMode = ParseOption( Options, "Game" );
-//		if( DesiredGameMode != "" && !(DesiredGameMode ~= GetFullGameModePath()) )
-//		{
-//			`log("Got bad wave length"@DesiredGameMode@"expected"@GetFullGameModePath());
-//			ErrorMessage = "<Strings:KFGame.KFLocalMessage.ServerNoLongerAvailableString>";
-//			return;
-//		}
-//	}
-
-
+	
 	bPerfTesting = ( ParseOption( Options, "AutomatedPerfTesting" ) ~= "1" );
 	bSpectator = bPerfTesting || ( ParseOption( Options, "SpectatorOnly" ) ~= "1" ) || ( ParseOption( Options, "CauseEvent" ) ~= "FlyThrough" );
 
@@ -1267,8 +1480,47 @@ event Broadcast(Actor Sender, coerce string Msg, optional name Type)
 
 	if ( Type == 'Say' )
 	{
-		ChatCommander.RunCDChatCommandIfAuthorized( Sender, Msg );
+		// Crappy workaround for the inability to pass Actor Sender through paramsimpl and delegate with the rest of the commands.
+		Msg = Locs(Msg);
+
+		if (Msg == "!cdready"||Msg == "!cdr")
+		{
+			ReadyUp(Sender);
+		}
+		else if (Msg == "!cdunready" || Msg == "!cdur")
+		{
+			Unready(Sender);
+		}
+		else if (Msg == "!cdmystats" || Msg == "!cdms")
+		{
+			GetPlayerStats(Sender);
+		}
+		else if ( Left( Msg, 13 ) == "!cdallhpfakes" || Left( Msg, 7 ) == "!cdahpf" )   // hey this one doesn't even need an actor, I'm just being lazy at this point.
+		{			
+			SetAllHPFakes(Sender, Msg);
+		}
+		else
+		{
+			ChatCommander.RunCDChatCommandIfAuthorized( Sender, Msg );
+		}
 	}
+}
+
+private function SetAllHPFakes(Actor Sender, string Msg)
+{
+	local array<string> params;
+	local string CommandString;
+	
+	ParseStringIntoArray( Msg, params, " ", true );
+	
+	CommandString = "!cdbhpf " $ params[1];
+	ChatCommander.RunCDChatCommandIfAuthorized( Sender, CommandString );
+	CommandString = "!cdfphpf " $ params[1];
+	ChatCommander.RunCDChatCommandIfAuthorized( Sender, CommandString );
+	CommandString = "!cdschpf " $ params[1];
+	ChatCommander.RunCDChatCommandIfAuthorized( Sender, CommandString );
+	CommandString = "!cdthpf " $ params[1];
+	ChatCommander.RunCDChatCommandIfAuthorized( Sender, CommandString );
 }
 
 /*
@@ -1277,7 +1529,7 @@ event Broadcast(Actor Sender, coerce string Msg, optional name Type)
  * from the chat window and shown only in the client's console side, depending
  * on that client's configuration.
  */
-function BroadcastCDEcho( coerce string Msg )
+function BroadcastCDEcho( coerce string Msg, optional float Delay )
 {
         local PlayerController P;
 
@@ -1304,6 +1556,16 @@ function WaveEnded( EWaveEndCondition WinCondition )
 	if ( ApplyStagedConfig( CDSettingChangeMessage, "Staged settings applied:" ) )
 	{
 		BroadcastCDEcho( CDSettingChangeMessage );
+	}
+	
+	if (bAutoPause)
+	{
+		BroadcastCDEcho( PauseTraderTime() );
+	}
+	
+	if (bUseReadySystem && !MyKFGRI.IsBossWave() )
+	{
+		UnreadyAllPlayers();
 	}
 }
 

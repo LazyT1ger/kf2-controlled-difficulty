@@ -94,11 +94,6 @@ function RunCDChatCommandIfAuthorized( Actor Sender, string CommandString )
 
 	AuthLevel = GetAuthorizationLevelForUser( Sender );
 
-	// Chat commands are case-insensitive.  Lowercase the command now
-	// so that we can do safely do string comparisons with lowercase
-	// operands below.
-	CommandString = Locs( CommandString );
-
 	// Split the chat command on spaces, dropping empty parts.
 	ParseStringIntoArray( CommandString, CommandTokens, " ", true );
 
@@ -361,66 +356,72 @@ private function string GetCDVersionChatString()
 }
 
 
+
+// Tiger removed totals list as it was redundant and the addition 8th line would cause a single spectator to force
+// cdwho results into console. This is undesirable as it creates confusion and an extra step if someone is spectating
+// a 6-man team.
 private function string GetCDWhoChatString()
 {
 	local KFPlayerController KFPC;
+	local CD_PlayerController CDPC;
 	local string Result, Code;
-	local int TotalCount, SpectatorCount;
+	local int TotalCount;
 	local name GameStateName;
+	
 
 	Result = "";
 	GameStateName = Outer.GetStateName();
 
         foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
-	{
-		Code = "";
+		{
+			CDPC = CD_PlayerController(KFPC);
+			Code = "";
 
-		if ( !KFPC.bIsPlayer || KFPC.bDemoOwner )
-		{
-			continue;
-		}
+			if ( !KFPC.bIsPlayer || KFPC.bDemoOwner )
+			{
+				continue;
+			}
 
-		if ( !KFPC.PlayerReplicationInfo.bOnlySpectator )
-		{
-			SpectatorCount++;
-			Code = "S";
-		}
-
-		if ( GameStateName == 'PendingMatch' )
-		{
-			Code = KFPC.PlayerReplicationInfo.bReadyToPlay ? "R" : "_";
-		}
-		else if ( GameStateName == 'PlayingWave' )
-		{
-			Code = KFPC.Pawn.IsAliveAndWell() ? "L" : "D";
-		}
+			if ( KFPC.PlayerReplicationInfo.bOnlySpectator )
+			{
+				Code = "SPEC_";
+			}
 		
-		if ( 0 < TotalCount )
-		{
-			Result $= "\n";
-		}
+			if ( GameStateName == 'TraderOpen' )
+			{
+				if ( !KFPC.PlayerReplicationInfo.bOnlySpectator )
+				{
+					Code = CDPC.bIsReadyForNextWave ? "READY" : "_____";
+				}
+			}
+		
+			if ( GameStateName == 'PendingMatch' )
+			{
+				if ( !KFPC.PlayerReplicationInfo.bOnlySpectator )
+				{
+					Code = KFPC.PlayerReplicationInfo.bReadyToPlay ? "READY" : "_____";
+				}
+			}
+		
+			else if ( GameStateName == 'PlayingWave' && !KFPC.PlayerReplicationInfo.bOnlySpectator )
+			{
+				Code = KFPC.Pawn.IsAliveAndWell() ? "ALIVE" : "DEAD_";
+			}
+		
+			if ( 0 < TotalCount )
+			{
+				Result $= "\n";
+			}
 
-		if ( Code != "" )
-		{
-			Result $= "["$ Code $"] ";
-		}
+			if ( Code != "" )
+			{
+				Result $= "["$ Code $"] ";
+			}
 
-		Result $= KFPC.PlayerReplicationInfo.PlayerName;
+			Result $= KFPC.PlayerReplicationInfo.PlayerName;
 
-		TotalCount++;
+			TotalCount++;
         }
-
-	if ( Result != "" )
-	{
-		Result $= "\n";
-	}
-
-	Result $= TotalCount $ " total";
-
-	if ( 0 < SpectatorCount )
-	{
-		Result $= ", " $ SpectatorCount $ " spectator(s)";
-	}
 
 	return Result;
 }
