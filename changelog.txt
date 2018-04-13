@@ -8,7 +8,7 @@ Tiger's Build - 2018-04-13
 - Moved my Build's source from Google drive to GitHub
 - added !cdwaveendsummaries and !cdwes chat commands to toggle their display
 - added WaveEndSummaries to config options to toggle their display
-- added !cdusereadysystem and !cdurs chat commands to toggle Ready System functionality
+- added !cdenablereadysystem and !cders chat commands to toggle Ready System functionality
 - added UseReadySystem to config option to toggle Ready System functionality
 - fixed a bug where Boss Cinematics could break or get 'stuck' on screen.
 - potentially fixed a bug where players joining during trader time would trigger TWI's delayed login and cause it to take ~30 seconds to actually spawn in.
