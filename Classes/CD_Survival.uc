@@ -1200,28 +1200,40 @@ private function GetPlayerStats(Actor Sender)
 	local KFPlayerController KFPC;
 	local string PlayerStats;
 	
-	local int DoshEarned;
-	local int HealsGiven;
-	local int HealsRecv;
-	local int DamageDealt;
-	local int DamageRecv;
-	
+	local int DoshEarned,
+			  LargeKills,
+			  HealsGiven,
+			  HealsRecv,
+			  DamageDealt,
+			  DamageRecv;
+			  
 	KFPC = KFPlayerController(Sender);
 	PlayerStats = "";
 	
 	if ( KFPlayerController(Sender) != none && !KFPC.PlayerReplicationInfo.bOnlySpectator)
 	{
 		DoshEarned = KFPC.MatchStats.TotalDoshEarned + KFPC.MatchStats.GetDoshEarnedInWave();
+		LargeKills = KFPC.MatchStats.TotalLargeZedKills;
 		HealsGiven = KFPC.MatchStats.TotalAmountHealGiven + KFPC.MatchStats.GetHealGivenInWave();
 		HealsRecv  = KFPC.MatchStats.TotalAmountHealReceived + KFPC.MatchStats.GetHealReceivedInWave();
 		DamageDealt= KFPC.MatchStats.TotalDamageDealt + KFPC.MatchStats.GetDamageDealtInWave();
 		DamageRecv = KFPC.MatchStats.TotalDamageTaken + KFPC.MatchStats.GetDamageTakenInWave();
 		
 		PlayerStats = "Stats for " $ KFPC.PlayerReplicationInfo.PlayerName $ ": \n" $
-			"Dosh Earned:" $ DoshEarned $ "\n" $
+			"Dosh Earned:" $ DoshEarned $ " Large Kills: " $ LargeKills $ "\n" $
 		    "Heals - Given: " $ HealsGiven $ " Received: " $ HealsRecv $ "\n" $
 			"Damage - Dealt: " $ DamageDealt $ " Taken: " $ DamageRecv $ "\n" $
-			"Shots - Fired: " $ KFPC.ShotsFired $ " Hit: " $ KFPC.ShotsHit $ " Headshots: " $ KFPC.ShotsHitHeadshot;
+			"Shots - Fired: " $ KFPC.ShotsFired $ " Hit: " $ KFPC.ShotsHit $ "(";
+		
+			//ugly workaround for negative return prior to first shot.
+			if (KFPC.ShotsFired > 0)
+			{
+				PlayerStats = PlayerStats $ round(Float(KFPC.ShotsHit)/Float(KFPC.ShotsFired) * 100.0) $ "%) HS: " $ KFPC.ShotsHitHeadshot;
+			}
+			else
+			{
+				PlayerStats = PlayerStats $ "0%) HS: " $ KFPC.ShotsHitHeadshot;
+			}
 			
 		BroadCastCDEcho( PlayerStats );
 	}
@@ -1399,7 +1411,7 @@ final function int GetEffectivePlayerCountForZedType( KFPawn_Monster P, int Huma
 {
 	local int FakeValue, EffectiveNumPlayers;
 
-	if ( None != KFPawn_MonsterBoss( P ) )
+	if ( None != KFPawn_MonsterBoss( P ) || None != KFPawn_ZedFleshpoundKing( P ) || None != KFPawn_ZedBloatKing( P ) )  //King Fleshpound and King Bloat do not extend from MonsterBoss
 	{
 		FakeValue = BossHPFakesInt;
 	}
@@ -1499,6 +1511,14 @@ event Broadcast(Actor Sender, coerce string Msg, optional name Type)
 		{			
 			SetAllHPFakes(Sender, Msg);
 		}
+		/*
+			// to be implemented in a future version
+		
+		else if ( Left( Msg, 8 ) == "!cdcolor" )
+		{
+			SetCDBroadcastColor(Sender, Msg);
+		}
+		*/
 		else
 		{
 			ChatCommander.RunCDChatCommandIfAuthorized( Sender, Msg );
@@ -1517,11 +1537,35 @@ private function SetAllHPFakes(Actor Sender, string Msg)
 	ChatCommander.RunCDChatCommandIfAuthorized( Sender, CommandString );
 	CommandString = "!cdfphpf " $ params[1];
 	ChatCommander.RunCDChatCommandIfAuthorized( Sender, CommandString );
+	CommandString = "!cdqphpf " $ params[1];
+	ChatCommander.RunCDChatCommandIfAuthorized( Sender, CommandString );
 	CommandString = "!cdschpf " $ params[1];
 	ChatCommander.RunCDChatCommandIfAuthorized( Sender, CommandString );
 	CommandString = "!cdthpf " $ params[1];
 	ChatCommander.RunCDChatCommandIfAuthorized( Sender, CommandString );
 }
+
+/*
+
+// simple func to set CDEcho color for chat command sender
+// the fact that params[1] is not validated with regex like [A-Fa-f0-9]{6} partially disgusts me
+// on the other hand, I'm lazy. So there's that. This feature will be completed or removed in a future release
+// this should also save to config
+
+private function SetCDBroadcastColor(Actor Sender, string Msg)
+{
+	local array<string> params;
+	local CD_PlayerController CDPC;
+	ParseStringIntoArray( Msg, params, " ", true );
+	
+	CDPC = CD_PlayerController(Sender);
+	CDPC.CDEchoMessageColor = params[1];
+	
+	//Todo cast this to/from cd_playercontroller and a string in cd_survival and call SaveConfig
+	
+}
+
+*/
 
 /*
  * Send a CDEcho message to all players.  These messages are not
@@ -1558,12 +1602,13 @@ function WaveEnded( EWaveEndCondition WinCondition )
 		BroadcastCDEcho( CDSettingChangeMessage );
 	}
 	
-	if (bAutoPause)
+	// AutoPause if it's enabled and game isn't over
+	if (bAutoPause && WinCondition != WEC_TeamWipedOut && WinCondition != WEC_GameWon )
 	{
 		BroadcastCDEcho( PauseTraderTime() );
 	}
-	
-	if (bEnableReadySystem && !MyKFGRI.IsBossWave() )
+	// Prep Ready System if it's enabled and game isn't over
+	if (bEnableReadySystem && WinCondition != WEC_TeamWipedOut && WinCondition != WEC_GameWon )
 	{
 		UnreadyAllPlayers();
 	}

@@ -322,7 +322,7 @@ function string GetCDInfoChatString( const string Verbosity )
 {
 	local int i;
 	local string Result;
-
+	
 	if ( Verbosity == "full" )
 	{
 		Result = "";
@@ -339,12 +339,18 @@ function string GetCDInfoChatString( const string Verbosity )
 	else
 	{
 		Result =
+			SpawnCycleSetting.GetBriefChatLine() $ "\n" $
 			MaxMonstersSetting.GetBriefChatLine() $ "\n" $
 			WaveSizeFakesSetting.GetBriefChatLine() $ "\n" $
 			SpawnPollSetting.GetBriefChatLine() $ "\n" $
 			SpawnModSetting.GetBriefChatLine() $ "\n" $
-			CohortSizeSetting.GetBriefChatLine() $ "\n" $
-			SpawnCycleSetting.GetBriefChatLine();
+			CohortSizeSetting.GetBriefChatLine();
+	
+		// if it's bosswave, include bosshpfakes
+		if ( MyKFGRI.IsBossWave() )
+		{
+			Result = Result $ "\n" $ BossHPFakesSetting.GetBriefChatLine();
+		}
 	}
 
 	return Result;
@@ -391,7 +397,7 @@ private function string GetCDWhoChatString()
 			{
 				if ( !KFPC.PlayerReplicationInfo.bOnlySpectator )
 				{
-					Code = CDPC.bIsReadyForNextWave ? "READY" : "_____";
+					Code = CDPC.bIsReadyForNextWave ? "READY" : "______";
 				}
 			}
 		
@@ -399,7 +405,7 @@ private function string GetCDWhoChatString()
 			{
 				if ( !KFPC.PlayerReplicationInfo.bOnlySpectator )
 				{
-					Code = KFPC.PlayerReplicationInfo.bReadyToPlay ? "READY" : "_____";
+					Code = KFPC.PlayerReplicationInfo.bReadyToPlay ? "READY" : "______";
 				}
 			}
 		
@@ -420,8 +426,8 @@ private function string GetCDWhoChatString()
 
 			Result $= KFPC.PlayerReplicationInfo.PlayerName;
 
-			TotalCount++;
+			TotalCount++;		
         }
-
+		
 	return Result;
 }
