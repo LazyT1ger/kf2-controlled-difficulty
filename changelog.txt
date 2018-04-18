@@ -1,3 +1,13 @@
+Tiger's Build - 2018-04-18
+---------------------------------
+- Fixed BossHPFakes not applying to Abomination and KingFleshpound (bug inherited from CD Master Branch)
+- Fixed broadcast output for autopause occuring on defeat
+- Added Accuracy % to cdmystats output
+- Added large kills to cdmystats output
+- Added BossHPfakes to cdinfo breif output (on bosswave only)
+- Adjusted CDWho output (again)
+
+
 Tiger's Build - 2018-04-13
 ---------------------------------
 - CD chat box text is now orange, deal with it. (and blame Kore for giving me the idea)
