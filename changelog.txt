@@ -1,16 +1,31 @@
+Tiger's Build - 2018-04-27
+---------------------------------
+- Fixed HPFakes not applying correctly to KingFleshpound (bug inherited from CD Master Branch)
+- Significantly reduced evaluation required for HP Fakes by rewriting GetEffectivePlayerCountForZedType()
+- Added QuarterpoundHPFakes (CD Master Branch scaled QP HP with Fleshpound HP Fakes)
+- Added !cdmikepls chat command
+- Added !cdstats <stat> chat command to list specific stats for all connected players
+	accepted stat names: - Accuracy
+						 - Dosh Earned
+						 - Damage Done
+						 - Heals Given
+						 - Headshots
+						 - Large Kills
+- Added !cdCountHeadshotsPerPellet (Shorthand !cdchspp) chat command and config option to toggle how headshots are counted (per pellet or per shot)
+- Added headshot accuracy % to cdmystats output
+
 Tiger's Build - 2018-04-18
 ---------------------------------
-- Fixed BossHPFakes not applying to Abomination and KingFleshpound (bug inherited from CD Master Branch)
-- Fixed broadcast output for autopause occuring on defeat
+- Fixed BossHPFakes not applying to Abomination (bug inherited from CD Master Branch)
+- Fixed broadcast output for autopause occurring on defeat
 - Added Accuracy % to cdmystats output
 - Added large kills to cdmystats output
 - Added BossHPfakes to cdinfo breif output (on bosswave only)
 - Adjusted CDWho output (again)
 
-
 Tiger's Build - 2018-04-13
 ---------------------------------
-- CD chat box text is now orange, deal with it. (and blame Kore for giving me the idea)
+- CD chat box text is now orange, deal with it. (blame Kore for giving me the idea)
 	I will be adding an option to configure this in the near future
 - closed my pull request for GSO_V1 to CD master branch (The PR has been open for months, I've given up on it.)
 - Rewrote a large amount of my code to be more compatible with Blackout's mainline version of CD
@@ -22,7 +37,6 @@ Tiger's Build - 2018-04-13
 - added UseReadySystem to config option to toggle Ready System functionality
 - fixed a bug where Boss Cinematics could break or get 'stuck' on screen.
 - potentially fixed a bug where players joining during trader time would trigger TWI's delayed login and cause it to take ~30 seconds to actually spawn in.
-
 
 Tiger's Build - 2018-04-11
 ---------------------------------
@@ -37,8 +51,7 @@ Tiger's Build - 2018-04-11
 Tiger's Build - 2018-04-03
 ---------------------------------
 - fixed an issue where GetPlayerNumMaxAIModifier() could pass the wrong value to GetEffectivePlayerCount()
-  which in turn disrupted calculations for wavesizefakes if fakesmode was set to add. 
-
+  which in turn disrupted calculations for wavesizefakes if fakesmode was set to add.
 
 Tiger's Build - 2018-03-28
 ---------------------------------
