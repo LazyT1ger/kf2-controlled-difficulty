@@ -1,7 +1,7 @@
 //=============================================================================
 // ControlledDifficulty_Survival
 //=============================================================================
-// Survival with less bullshit
+// Because vanilla Survival sucks
 //=============================================================================
 
 class CD_Survival extends KFGameInfo_Survival;
@@ -43,6 +43,22 @@ enum ECDAuthLevel
 	CDAUTH_WRITE
 };
 
+struct StructCDPlayerStats
+{
+	var string PlayerName;
+	var int DoshEarned;
+	var int LargeKills;
+	var int HealsGiven;
+	var int HealsRecv;
+	var int DamageDealt;
+	var int DamageRecv;
+	var int ShotsFired;
+	var int ShotsHit;
+	var int HeadShots;
+	var float Accuracy;
+	var float HSAccuracy;
+};
+
 struct StructAuthorizedUsers
 {
 	var string SteamID;
@@ -52,7 +68,6 @@ struct StructAuthorizedUsers
 ////////////////////
 // Config options //
 ////////////////////
-
 
 //
 // ### Spawn Intensity Settings
@@ -351,6 +366,15 @@ var config string FleshpoundHPFakes;
 var config const array<string> FleshpoundHPFakesDefs;
 var int FleshpoundHPFakesInt;
 
+// #### QuarterpoundHPFakes
+//
+// The fakes modifier applied when scaling quarterpound head and body health.
+//
+// This is affected by FakesMode.
+var config string QuarterpoundHPFakes;
+var config const array<string> QuarterpoundHPFakesDefs;
+var int QuarterpoundHPFakesInt;
+
 // #### ScrakeHPFakes
 //
 // The fakes modifier applied when scaling scrake head and body health.
@@ -450,6 +474,14 @@ var config ECDAuthLevel DefaultAuthLevel;
 var config string AutoPause;
 var bool bAutoPause;
 
+// ####
+// 
+// True counts headshot stats per per pellet (eg AF2011's count 2 headshots per hit if both pellets hit the head)
+// this is technically the most accurate setting, and what gameconductor uses.
+// If set to False cdmystats counts headshots per shot fired like the game awards screen uses.
+var config string CountHeadshotsPerPellet;
+var bool bCountHeadshotsPerPellet;
+
 // #### EnableReadySystem
 //
 // Toggles ready system functionality.
@@ -521,10 +553,14 @@ var config bool bLogControlledDifficulty;
 // Internal runtime state (no config options below this line) //
 ////////////////////////////////////////////////////////////////
 
+var array<StructCDPlayerStats> CDPlayerStats;
+
+
 var CD_DynamicSetting BossHPFakesSetting;
 var CD_DynamicSetting CohortSizeSetting;
 var CD_DynamicSetting WaveSizeFakesSetting;
 var CD_DynamicSetting FleshpoundHPFakesSetting;
+var CD_DynamicSetting QuarterpoundHPFakesSetting;
 var CD_DynamicSetting MaxMonstersSetting;
 var CD_DynamicSetting SpawnPollSetting;
 var CD_DynamicSetting ScrakeHPFakesSetting;
@@ -539,6 +575,7 @@ var CD_BasicSetting AlbinoCrawlersSetting;
 var CD_BasicSetting AlbinoGorefastsSetting;
 var CD_BasicSetting AutoPauseSetting;
 var CD_BasicSetting BossSetting;
+var CD_BasicSetting CountHeadshotsPerPelletSetting;
 var CD_BasicSetting FakesModeSetting;
 var CD_BasicSetting FleshpoundRageSpawnsSetting;
 var CD_BasicSetting SpawnCycleSetting;
@@ -667,6 +704,9 @@ private function SetupBasicSettings()
 	BossSetting = new(self) class'CD_BasicSetting_Boss';
 	RegisterBasicSetting( BossSetting );
 
+	CountHeadshotsPerPelletSetting = new(self) class'CD_BasicSetting_CountHeadshotsPerPellet';
+	RegisterBasicSetting( CountHeadshotsPerPelletSetting );
+	
 	FakesModeSetting = new(self) class'CD_BasicSetting_FakesMode';
 	RegisterBasicSetting( FakesModeSetting );
 
@@ -729,6 +769,10 @@ private function SetupDynamicSettings()
 	FleshpoundHPFakesSetting.IniDefsArray = FleshpoundHPFakesDefs;
 	RegisterDynamicSetting( FleshpoundHPFakesSetting );
 
+	QuarterpoundHPFakesSetting = new(self) class'CD_DynamicSetting_QuarterpoundHPFakes';
+	QuarterpoundHPFakesSetting.IniDefsArray = QuarterpoundHPFakesDefs;
+	RegisterDynamicSetting( QuarterpoundHPFakesSetting );
+	
 	TrashHPFakesSetting = new(self) class'CD_DynamicSetting_TrashHPFakes';
 	TrashHPFakesSetting.IniDefsArray = TrashHPFakesDefs;
 	RegisterDynamicSetting( TrashHPFakesSetting );
@@ -1039,37 +1083,39 @@ private function ReadyUp(Actor Sender)
 	
 	KFPC = KFPlayerController(Sender);
 	CDPC = CD_PlayerController(Sender);
-	
-	if (!bEnableReadySystem)
+	if (CDPC != none)
 	{
-		BroadCastCDEcho( "The Ready system is currently disabled." );
-	}
-	else
-	{
-		if ( GameStateName != 'TraderOpen' )
+		if (!bEnableReadySystem)
 		{
-			BroadCastCDEcho( "That command can only be used during trader time." );
-		}
-		else if ( !MyKFGRI.bStopCountDown )
-		{
-			BroadCastCDEcho( "Trader not paused, You can't ready up." );
-		}
-		else if (KFPC.PlayerReplicationInfo.bOnlySpectator)
-		{
-			BroadCastCDEcho( "Command not available to spectators.");
-		}
-		else if (CDPC.bIsReadyForNextWave)
-		{
-			BroadCastCDEcho( "We get it, you're ready." );
+			BroadCastCDEcho( "The Ready system is currently disabled." );
 		}
 		else
 		{
-			CDPC.bIsReadyForNextWave = true;
-			BroadCastCDEcho( KFPC.PlayerReplicationInfo.PlayerName $ " has readied up." );
-			if( AllPlayersAreReady() )
+			if ( GameStateName != 'TraderOpen' )
 			{
-				BroadCastCDEcho( "All Players are ready. Unpausing Trader." );
-				UnpauseTraderTime();
+				BroadCastCDEcho( "That command can only be used during trader time." );
+			}
+			else if ( !MyKFGRI.bStopCountDown )
+			{
+				BroadCastCDEcho( "Trader not paused, You can't ready up." );
+			}
+			else if (KFPC.PlayerReplicationInfo.bOnlySpectator)
+			{
+				BroadCastCDEcho( "Command not available to spectators.");
+			}
+			else if (CDPC.bIsReadyForNextWave)
+			{
+				BroadCastCDEcho( "We get it, you're ready." );
+			}
+			else
+			{
+				CDPC.bIsReadyForNextWave = true;
+				BroadCastCDEcho( KFPC.PlayerReplicationInfo.PlayerName $ " has readied up." );
+				if( AllPlayersAreReady() )
+				{
+					BroadCastCDEcho( "All Players are ready. Unpausing Trader." );
+					UnpauseTraderTime();
+				}
 			}
 		}
 	}
@@ -1090,36 +1136,40 @@ private function Unready(Actor Sender)
 	KFPC = KFPlayerController(Sender);
 	CDPC = CD_PlayerController(Sender);
 	
-	if (!bEnableReadySystem)
+	if (CDPC != none)
 	{
-		BroadCastCDEcho( "The Ready system is currently disabled." );
-	}
-	else
-	{
-		if ( GameStateName != 'TraderOpen' )
+		if (!bEnableReadySystem)
 		{
-			BroadCastCDEcho( "That command can only be used during trader time." );
-		}
-		else if (KFPC.PlayerReplicationInfo.bOnlySpectator)
-		{
-			BroadCastCDEcho( "Command not available to spectators.");
-		}
-		else if (!CDPC.bIsReadyForNextWave)
-		{
-			BroadCastCDEcho( "You were not ready to begin with." );
-		}
-		else if (WorldInfo.NetMode != NM_StandAlone && MyKFGRI.RemainingTime <= 5)
-		{
-			BroadCastCDEcho( "Unready requires at least 5 seconds remaining." );
+			BroadCastCDEcho( "The Ready system is currently disabled." );
 		}
 		else
 		{
-			CDPC.bIsReadyForNextWave = false;
-			BroadCastCDEcho( KFPC.PlayerReplicationInfo.PlayerName $ " has unreadied." );
-			if ( !MyKFGRI.bStopCountDown )
+		
+			if ( GameStateName != 'TraderOpen' )
 			{
-				PauseTraderTime();
-				BroadCastCDEcho("Countdown AutoPaused.");
+				BroadCastCDEcho( "That command can only be used during trader time." );
+			}
+			else if (KFPC.PlayerReplicationInfo.bOnlySpectator)
+			{
+				BroadCastCDEcho( "Command not available to spectators.");
+			}
+			else if (!CDPC.bIsReadyForNextWave)
+			{
+				BroadCastCDEcho( "You were not ready to begin with." );
+			}
+			else if (WorldInfo.NetMode != NM_StandAlone && MyKFGRI.RemainingTime <= 5)
+			{
+				BroadCastCDEcho( "Unready requires at least 5 seconds remaining." );
+			}
+			else
+			{
+				CDPC.bIsReadyForNextWave = false;
+				BroadCastCDEcho( KFPC.PlayerReplicationInfo.PlayerName $ " has unreadied." );
+				if ( !MyKFGRI.bStopCountDown )
+				{
+					PauseTraderTime();
+					BroadCastCDEcho("Countdown AutoPaused.");
+				}
 			}
 		}
 	}
@@ -1142,23 +1192,26 @@ private function bool AllPlayersAreReady()
 	{
         CDPC = CD_PlayerController(KFPC);
 		
-		if ( !KFPC.bIsPlayer || KFPC.bDemoOwner )
+		if (CDPC != none)
 		{
-			continue;
+		
+			if ( !KFPC.bIsPlayer || KFPC.bDemoOwner )
+			{
+				continue;
+			}
+			else
+			{
+				TotalPlayerCount++;
+			}		       
+			if ( KFPC.PlayerReplicationInfo.bOnlySpectator )
+			{
+				SpectatorCount++;
+			}
+			else if ( CDPC.bIsReadyForNextWave && !KFPC.PlayerReplicationInfo.bOnlySpectator)
+			{
+				ReadyCount++;
+			}
 		}
-		else
-		{
-			TotalPlayerCount++;
-        }
-		       
-        if ( KFPC.PlayerReplicationInfo.bOnlySpectator )
-		{
-            SpectatorCount++;
-        }
-		else if ( CDPC.bIsReadyForNextWave && !KFPC.PlayerReplicationInfo.bOnlySpectator)
-		{
-            ReadyCount++;
-        }
     }
 	
     if (TotalPlayerCount == ReadyCount + SpectatorCount)
@@ -1182,19 +1235,322 @@ private function UnreadyAllPlayers()
 		if ( KFPC.bIsPlayer && !KFPC.PlayerReplicationInfo.bOnlySpectator && !KFPC.bDemoOwner )
 		{
 			CDPC = CD_PlayerController(KFPC);
-			CDPC.bIsReadyForNextWave = false;
+			if (CDPC != none)
+			{
+				CDPC.bIsReadyForNextWave = false;
+			}
 		}
 	}
 	
 	BroadcastCDEcho( "Type \"!cdready\" or \"!cdr\" to ready up for the next wave." );
 }
 
+//////////////////////////////
+// CD PLAYER STATS FEATURES //
+//////////////////////////////
+/*
+ * This stuff should really be in it's own class
+ & but i'm lazy so i'll do it later.
+ */
+
+function string CDStatsCommand(string CommandString)
+{
+	local array<string> params;
+	local string Stat;
+	local string Output;
+	local int i;
+	
+	ParseStringIntoArray( CommandString, params, " ", true );
+	Stat = Locs(params[1]);
+	
+	// refresh CDPlayerStats array
+	GetCDPlayerStats();	
+	
+	// note: this is a messy looking implementation, but functional.
+	// 		 I wouldn't rule out future optimization.
+	
+	if ( WaveNum < 1 )
+	{
+		return ("The crystal ball is broken. Try again after the first wave has started.");
+	}
+	
+	if (Left( Stat, 3 ) == "acc")
+	{
+		CDPlayerStats.Sort(ByAccuracy);
+		
+		Output = "--- Accuracy ------------------------------------------";
+		
+		for (i = 0; i < CDPlayerStats.Length; i++)
+		{
+			Output = Output $ "\n" $ i+1 $ ") - " $ round(CDPlayerStats[i].Accuracy) $ "% [F:" $ CDPlayerStats[i].ShotsFired $ "/H:" $ CDPlayerStats[i].ShotsHit $ "] HS: " $ round(CDPlayerStats[i].HSAccuracy) $ "% - " $ CDPlayerStats[i].PlayerName ;
+		}
+		
+	}
+	else if (Left( Stat, 4 ) == "dama" || Stat == "dmg")
+	{		
+		CDPlayerStats.Sort(ByDamageDealt);
+		
+		Output = "--- Damage Dealt ----------------------------------";
+		
+		for (i = 0; i < CDPlayerStats.Length; i++)
+		{
+			Output = Output $ "\n" $ i+1 $ ") - " $ CDPlayerStats[i].DamageDealt $ " - " $ CDPlayerStats[i].PlayerName ;
+		}
+	}
+	else if (Left( Stat, 4 ) == "dosh")
+	{
+		CDPlayerStats.Sort(ByDoshEarned);
+		
+		Output = "-- Dosh Earned ---------------------------------------";
+		
+		for (i = 0; i < CDPlayerStats.Length; i++)
+		{		
+			Output = Output $ "\n" $ i+1 $ ") - " $ CDPlayerStats[i].DoshEarned $ " - " $ CDPlayerStats[i].PlayerName ;
+		}
+	}
+	else if (Left( Stat, 4 ) == "head" || Stat == "hs")
+	{
+		CDPlayerStats.Sort(ByHeadshots);
+		
+		Output = "-- Headshots ------------------------------------------";
+
+		for (i = 0; i < CDPlayerStats.Length; i++)
+		{
+			Output = Output $ "\n" $ i+1 $ ") - " $ CDPlayerStats[i].Headshots $ "[" $ round(CDPlayerStats[i].HSAccuracy) $ "%] - " $ CDPlayerStats[i].PlayerName ;
+		}
+	}
+	else if (Left( Stat, 4 ) == "heal")
+	{
+		CDPlayerStats.Sort(ByHealsGiven);
+		
+		Output = "-- Heals Given ----------------------------------------";
+		
+		for (i = 0; i < CDPlayerStats.Length; i++)
+		{
+			Output = Output $ "\n" $ i+1 $ ") - " $ CDPlayerStats[i].HealsGiven $ " - " $ CDPlayerStats[i].PlayerName ;
+		}
+	}
+	else if (Left( Stat, 4 ) == "larg")
+	{
+		CDPlayerStats.Sort(ByLargeKills);
+		
+		Output = "-- Large Kills -------------------------------------------";
+		
+		for (i = 0; i < CDPlayerStats.Length; i++)
+		{
+			Output = Output $ "\n" $ i+1 $ ") - " $ CDPlayerStats[i].LargeKills $ " - " $ CDPlayerStats[i].PlayerName ;
+		}
+	}
+	/*
+	 * joke stat not to actually be included in release
+	 * 
+	else if (Left( Stat, 5 ) == "skill")
+	{
+		// It wouldn't be Tiger's CD Build without some obligatory sass.
+		Output = "-- Skill -----------------------------------------------------";
+		
+		for (i = 0; i < CDPlayerStats.Length; i++)
+		{
+			Output = Output $ "\n" $ i+1 $ ") player \"" $ CDPlayerStats[i].PlayerName $ "\" has no skill." ;
+		}
+	}
+	*/
+	else
+	{
+		Output = "PEBCAK- Unrecognized Statistic \" " $ Stat $" \". Available stats are:\nAccuracy, Damage, Dosh Earned, HeadShots, Healing, and Large Kills";
+	}
+	
+	return Output;
+}
+
+// NOTE: This code can probably be improved so that only one sort function is needed
+
+// #### ByAccuracy
+// Sorting for playerstats structs within array
+private function int ByAccuracy( StructCDPlayerStats a, StructCDPlayerStats b )
+{
+	local int x;
+	local int y;
+	
+	x = a.Accuracy;
+	y = b.Accuracy;
+
+	if ( x < y )
+	{
+		return -1;
+	}
+	else if ( x > y )
+	{
+		return 1;
+	}
+	return 0;
+}
+
+
+// #### ByDamageDealt
+// Sorting for playerstats structs within array
+private function int ByDamageDealt( StructCDPlayerStats a, StructCDPlayerStats b )
+{
+	local int x;
+	local int y;
+	
+	x = a.DamageDealt;
+	y = b.DamageDealt;
+
+	if ( x < y )
+	{
+		return -1;
+	}
+	else if ( x > y )
+	{
+		return 1;
+	}
+	return 0;
+}
+
+// #### ByDoshEarned
+// Sorting for playerstats structs within array
+private function int ByDoshEarned( StructCDPlayerStats a, StructCDPlayerStats b )
+{
+	local int x;
+	local int y;
+	
+	x = a.DoshEarned;
+	y = b.DoshEarned;
+
+	if ( x < y )
+	{
+		return -1;
+	}
+	else if ( x > y )
+	{
+		return 1;
+	}
+	return 0;
+}
+
+// #### ByHeadshots
+// Sorting for playerstats structs within array
+private function int ByHeadshots( StructCDPlayerStats a, StructCDPlayerStats b )
+{
+	local int x;
+	local int y;
+	
+	x = a.Headshots;
+	y = b.Headshots;
+
+	if ( x < y )
+	{
+		return -1;
+	}
+	else if ( x > y )
+	{
+		return 1;
+	}
+	return 0;
+}
+
+// #### ByHealsGiven
+// Sorting for playerstats structs within array
+private function int ByHealsGiven( StructCDPlayerStats a, StructCDPlayerStats b )
+{
+	local int x;
+	local int y;
+	
+	x = a.HealsGiven;
+	y = b.HealsGiven;
+
+	if ( x < y )
+	{
+		return -1;
+	}
+	else if ( x > y )
+	{
+		return 1;
+	}
+	return 0;
+}
+
+// #### ByLargeKills
+// Sorting for playerstats structs within array
+private function int ByLargeKills( StructCDPlayerStats a, StructCDPlayerStats b )
+{
+	local int x;
+	local int y;
+	
+	x = a.LargeKills;
+	y = b.LargeKills;
+
+	if ( x < y )
+	{
+		return -1;
+	}
+	else if ( x > y )
+	{
+		return 1;
+	}
+	return 0;
+}
+
+// #### GetCDPlayerStats
+//
+// We call this function to empty and repopulate the CDPlayerStats array with fresh
+// data from all connected players.
+function GetCDPlayerStats()
+{
+	local KFPlayerController KFPC;
+	local StructCDPlayerStats srs;
+	
+	CDPlayerStats.Length = 0;
+	
+	foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+	{
+		if ( KFPC != none && KFPC.bIsPlayer && !KFPC.PlayerReplicationInfo.bOnlySpectator && !KFPC.bDemoOwner )
+		{
+			srs.PlayerName = KFPC.PlayerReplicationInfo.PlayerName;
+			srs.DoshEarned = KFPC.MatchStats.TotalDoshEarned + KFPC.MatchStats.GetDoshEarnedInWave();
+			srs.LargeKills = KFPC.MatchStats.TotalLargeZedKills;
+			srs.HealsGiven = KFPC.MatchStats.TotalAmountHealGiven + KFPC.MatchStats.GetHealGivenInWave();
+			srs.HealsRecv  = KFPC.MatchStats.TotalAmountHealReceived + KFPC.MatchStats.GetHealReceivedInWave();
+			srs.DamageDealt= KFPC.MatchStats.TotalDamageDealt + KFPC.MatchStats.GetDamageDealtInWave();
+			srs.DamageRecv = KFPC.MatchStats.TotalDamageTaken + KFPC.MatchStats.GetDamageTakenInWave();
+			srs.ShotsFired = KFPC.ShotsFired;
+			srs.ShotsHit   = KFPC.ShotsHit;
+
+			// use toggle hs count per pellet or per shot
+			// gameconductor uses per pellet but end of match award screen uses per shot
+			if (bCountHeadshotsPerPellet)
+			{
+				srs.Headshots  = KFPC.ShotsHitHeadshot;
+			}
+			else
+			{
+				srs.HeadShots  = KFPC.MatchStats.TotalHeadShots + KFPC.MatchStats.GetHeadShotsInWave();
+			}
+			
+			// prevent negative accuracy percentages
+			if (srs.ShotsFired > 0 && srs.ShotsHit > 0)
+			{
+				srs.Accuracy   = round(Float(srs.ShotsHit)/Float(srs.ShotsFired) * 100.0);
+				srs.HSAccuracy = round(Float(srs.Headshots)/Float(srs.ShotsHit) * 100.0);
+			}
+			else
+			{
+				srs.Accuracy   = 0;
+				srs.HSAccuracy = 0;
+			}
+			
+			CDPlayerStats.AddItem( srs );
+		}
+	}
+}
+
+
 /*
  * called by !cdmystats command, since we can't use local vars in an event
  * These stats are already collected for us through EphemeralMatchStats for GameConductor
- * and end of match rewards so we might as well make them available to players on request.
+ * and end of match awards so we might as well make them available to players on request.
  */
-
 private function GetPlayerStats(Actor Sender)
 {
 	local KFPlayerController KFPC;
@@ -1205,12 +1561,15 @@ private function GetPlayerStats(Actor Sender)
 			  HealsGiven,
 			  HealsRecv,
 			  DamageDealt,
-			  DamageRecv;
+			  DamageRecv,
+			  ShotsFired,
+			  ShotsHit,
+			  HeadShots;
 			  
 	KFPC = KFPlayerController(Sender);
 	PlayerStats = "";
 	
-	if ( KFPlayerController(Sender) != none && !KFPC.PlayerReplicationInfo.bOnlySpectator)
+	if (!KFPC.PlayerReplicationInfo.bOnlySpectator)
 	{
 		DoshEarned = KFPC.MatchStats.TotalDoshEarned + KFPC.MatchStats.GetDoshEarnedInWave();
 		LargeKills = KFPC.MatchStats.TotalLargeZedKills;
@@ -1218,26 +1577,27 @@ private function GetPlayerStats(Actor Sender)
 		HealsRecv  = KFPC.MatchStats.TotalAmountHealReceived + KFPC.MatchStats.GetHealReceivedInWave();
 		DamageDealt= KFPC.MatchStats.TotalDamageDealt + KFPC.MatchStats.GetDamageDealtInWave();
 		DamageRecv = KFPC.MatchStats.TotalDamageTaken + KFPC.MatchStats.GetDamageTakenInWave();
+		ShotsFired = KFPC.ShotsFired;
+		ShotsHit   = KFPC.ShotsHit;	
+		
+		if (bCountHeadshotsPerPellet)
+		{
+			Headshots = KFPC.ShotsHitHeadshot;
+		}
+		else
+		{
+			HeadShots  = KFPC.MatchStats.TotalHeadShots + KFPC.MatchStats.GetHeadShotsInWave();
+		}
 		
 		PlayerStats = "Stats for " $ KFPC.PlayerReplicationInfo.PlayerName $ ": \n" $
 			"Dosh Earned:" $ DoshEarned $ " Large Kills: " $ LargeKills $ "\n" $
 		    "Heals - Given: " $ HealsGiven $ " Received: " $ HealsRecv $ "\n" $
 			"Damage - Dealt: " $ DamageDealt $ " Taken: " $ DamageRecv $ "\n" $
-			"Shots - Fired: " $ KFPC.ShotsFired $ " Hit: " $ KFPC.ShotsHit $ "(";
+			"Shots - Fired: " $ ShotsFired $ " Hit: " $ ShotsHit $ "(" $ round(Float(ShotsHit)/Float(ShotsFired) * 100.0) $ "%) HS: " $ HeadShots $ "(" $ round(Float(HeadShots)/Float(ShotsHit) * 100.0) $ "%)";
 		
-			//ugly workaround for negative return prior to first shot.
-			if (KFPC.ShotsFired > 0)
-			{
-				PlayerStats = PlayerStats $ round(Float(KFPC.ShotsHit)/Float(KFPC.ShotsFired) * 100.0) $ "%) HS: " $ KFPC.ShotsHitHeadshot;
-			}
-			else
-			{
-				PlayerStats = PlayerStats $ "0%) HS: " $ KFPC.ShotsHitHeadshot;
-			}
-			
 		BroadCastCDEcho( PlayerStats );
 	}
-	else if ( KFPC.PlayerReplicationInfo.bOnlySpectator ) 
+	else
 	{	// Provide obligatory sass to people using this command when they shouldn't.
 		BroadCastCDEcho( "You've spectated really hard, but that doesn't count for anything." );
 	}
@@ -1406,26 +1766,57 @@ final function int GetEffectivePlayerCount( int HumanPlayers )
  * Get the playercount applied to a specific zed's HP scaling.  This accounts
  * for FakesMode and whichever Boss/Fleshpound/Scrake/TrashHPFakes option is
  * applicable.
- */
+  */
 final function int GetEffectivePlayerCountForZedType( KFPawn_Monster P, int HumanPlayers )
 {
 	local int FakeValue, EffectiveNumPlayers;
+	local string Zed;
+	Zed = string(P.LocalizationKey);
+	if ( P != none )
+	{
+		switch (Zed)
+		{	
+			// ---------- Bosses ----------
 
-	if ( None != KFPawn_MonsterBoss( P ) || None != KFPawn_ZedFleshpoundKing( P ) || None != KFPawn_ZedBloatKing( P ) )  //King Fleshpound and King Bloat do not extend from MonsterBoss
-	{
-		FakeValue = BossHPFakesInt;
-	}
-	else if ( None != KFPawn_ZedFleshpound( P ) )
-	{
-		FakeValue = FleshpoundHPFakesInt;
-	}
-	else if ( None != KFPawn_ZedScrake( P ) )
-	{
-		FakeValue = ScrakeHPFakesInt;
+			case "KFPawn_ZedFleshpoundKing":
+				FakeValue = BossHPFakesInt;
+				break;
+
+			case "KFPawn_ZedBloatKing":
+				FakeValue = BossHPFakesInt;
+				break;
+
+			case "KFPawn_ZedPatriarch":
+				FakeValue = BossHPFakesInt;
+				break;
+
+			case "KFPawn_ZedHans":
+				FakeValue = BossHPFakesInt;
+				break;
+
+			// -------- Large Zeds --------
+
+			case "KFPawn_ZedFleshpound":
+				FakeValue = FleshpoundHPFakesInt;
+				break;
+
+			case "KFPawn_ZedScrake":
+				FakeValue = ScrakeHPFakesInt;
+				break;
+
+			case "KFPawn_ZedFleshpoundMini":
+				FakeValue = QuarterpoundHPFakesInt;
+				break;
+
+			// -------- Trash Zeds --------
+			
+			default:
+				FakeValue = TrashHPFakesInt;
+		}
 	}
 	else
 	{
-		FakeValue = TrashHPFakesInt;
+		`cdlog ("Warning - GetEffectivePlayerCountForZedType() was called for none.");
 	}
 
 	if ( FakesModeEnum == FPM_ADD )
@@ -1492,33 +1883,33 @@ event Broadcast(Actor Sender, coerce string Msg, optional name Type)
 
 	if ( Type == 'Say' )
 	{
-		// Crappy workaround for the inability to pass Actor Sender through paramsimpl and delegate with the rest of the commands.
+		// Crappy workaround for the inability to pass Actor Sender with the rest of the commands due to casting to string. (Substantial rewrite required for this)
 		Msg = Locs(Msg);
 
 		if (Msg == "!cdready"||Msg == "!cdr")
 		{
 			ReadyUp(Sender);
 		}
+		else if ( Left( Msg, 8 ) == "!cdstats")
+		{
+			BroadcastCDEcho(CDStatsCommand(Msg));
+		}
 		else if (Msg == "!cdunready" || Msg == "!cdur")
 		{
 			Unready(Sender);
+		}
+		else if (Msg == "!cdmikepls" )
+		{
+			BroadcastCDEcho("<ALL> mike5879: GET SHIT ON", "ffffff");
 		}
 		else if (Msg == "!cdmystats" || Msg == "!cdms")
 		{
 			GetPlayerStats(Sender);
 		}
-		else if ( Left( Msg, 13 ) == "!cdallhpfakes" || Left( Msg, 7 ) == "!cdahpf" )   // hey this one doesn't even need an actor, I'm just being lazy at this point.
+		else if ( Left( Msg, 13 ) == "!cdallhpfakes" || Left( Msg, 7 ) == "!cdahpf" )   // hey this one doesn't really need an actor, I'm just being lazy at this point.
 		{			
 			SetAllHPFakes(Sender, Msg);
-		}
-		/*
-			// to be implemented in a future version
-		
-		else if ( Left( Msg, 8 ) == "!cdcolor" )
-		{
-			SetCDBroadcastColor(Sender, Msg);
-		}
-		*/
+		}	
 		else
 		{
 			ChatCommander.RunCDChatCommandIfAuthorized( Sender, Msg );
@@ -1526,6 +1917,7 @@ event Broadcast(Actor Sender, coerce string Msg, optional name Type)
 	}
 }
 
+// QoL command, sets all hp fakes at once with one chat command
 private function SetAllHPFakes(Actor Sender, string Msg)
 {
 	local array<string> params;
@@ -1546,43 +1938,21 @@ private function SetAllHPFakes(Actor Sender, string Msg)
 }
 
 /*
-
-// simple func to set CDEcho color for chat command sender
-// the fact that params[1] is not validated with regex like [A-Fa-f0-9]{6} partially disgusts me
-// on the other hand, I'm lazy. So there's that. This feature will be completed or removed in a future release
-// this should also save to config
-
-private function SetCDBroadcastColor(Actor Sender, string Msg)
-{
-	local array<string> params;
-	local CD_PlayerController CDPC;
-	ParseStringIntoArray( Msg, params, " ", true );
-	
-	CDPC = CD_PlayerController(Sender);
-	CDPC.CDEchoMessageColor = params[1];
-	
-	//Todo cast this to/from cd_playercontroller and a string in cd_survival and call SaveConfig
-	
-}
-
-*/
-
-/*
  * Send a CDEcho message to all players.  These messages are not
  * length-restricted like ordinary chat messages, but they may be suppressed
  * from the chat window and shown only in the client's console side, depending
  * on that client's configuration.
  */
-function BroadcastCDEcho( coerce string Msg, optional float Delay )
+ 
+function BroadcastCDEcho( coerce string MsgStr, optional string MsgColor)
 {
-        local PlayerController P;
-
-	// Skip the AllowsBroadcast check
-        
-        foreach WorldInfo.AllControllers(class'PlayerController', P)
-        {
-                BroadcastHandler.BroadcastText( None, P, Msg, 'CDEcho' );
-        }
+	local PlayerController PC;
+	
+	//	skips the allow broadcast check
+	foreach WorldInfo.AllControllers(class'PlayerController', PC)
+	{
+		BroadcastHandler.BroadcastText( None, PC, MsgStr, 'CDEcho' );
+	}
 }
 
 /*

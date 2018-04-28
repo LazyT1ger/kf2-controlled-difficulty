@@ -15,7 +15,7 @@ var bool bIsReadyForNextWave;
 
 var CD_ConsolePrinter Client_CDCP;
 
-var const string CDEchoMessageColor;
+var string CDEchoMessageColor;
 
 /* CD introduces custom alpha and crawler zed classes to
    control albinism.  KF2's zed kill count (displayed at
@@ -53,6 +53,7 @@ simulated event PostBeginPlay()
 	}
 
 	AlphaGlitterBool = bool( AlphaGlitter );
+	
 }
 
 reliable client event TeamMessage( PlayerReplicationInfo PRI, coerce string S, name Type, optional float MsgLifeTime  )
@@ -64,6 +65,7 @@ reliable client event TeamMessage( PlayerReplicationInfo PRI, coerce string S, n
 	// Messages from CD bypass the usual chat display code
 	if ( PRI == None && S != "" && Type == 'CDEcho' )
 	{
+
 		// Log a copy of this message to the client's console;
 		// this happens regardless of what menu state the client is in (lobby, postgame, action)
 		LocalPlayer(Player).ViewportClient.ViewportConsole.OutputText("[ControlledDifficulty Server Message]\n  " $ Repl(S, "\n", "\n  "));
@@ -130,6 +132,6 @@ reliable client event TeamMessage( PlayerReplicationInfo PRI, coerce string S, n
 defaultproperties
 {
 	MatchStatsClass=class'ControlledDifficulty.CD_EphemeralMatchStats'
-	CDEchoMessageColor="FFA500"
 	bIsReadyForNextWave=false
+	CDEchoMessageColor="FFA500"
 }
