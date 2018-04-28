@@ -5,7 +5,7 @@ Tiger's Build - 2018-04-27
 - Added QuarterpoundHPFakes (CD Master Branch scaled QP HP with Fleshpound HP Fakes)
 - Added !cdmikepls chat command
 - Added !cdstats <stat> chat command to list specific stats for all connected players
-	accepted stat names: - Accuracy
+	accepted stat names: 			 - Accuracy
 						 - Dosh Earned
 						 - Damage Done
 						 - Heals Given
