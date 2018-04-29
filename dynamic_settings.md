@@ -1,9 +1,9 @@
 # Dynamic Settings Reference
 
-CD has some configuration options capable of automatically adjusting to changes in human player count or wave progression.
-These are called "dynamic settings".
+Controlled Difficulty has the ability to dynamically scale various settings within pre-defined values based on player count and wave number.
+We call these options "dynamic settings".
 
-This is useful on CD dedicated servers.  The admin can use this feature to make CD automatically tailor its difficulty
+This is particularly useful on dedicated servers as it allows the server admin to make CD automatically tailor its difficulty
 settings to the number of players present and how far they are in the current game (wave-wise).
 
 It's also useful solo for ratcheting difficulty wave-by-wave.  Want spawn frequency and maxmonsters to gradually
@@ -12,12 +12,13 @@ with precision and repeatability.
 
 ### Supported Settings
 
-The following CD settings support dynamism:
+The following CD settings support dynamic values:
 
 * `BossHPFakes`
 * `CohortSize`
 * `FleshpoundHPFakes`
 * `MaxMonsters`
+* `QuarterpoundHPFakes`
 * `ScrakeHPFakes`
 * `SpawnMod`
 * `SpawnPoll`
@@ -31,8 +32,8 @@ don't use the special dynamic setting value syntaxes described in this document 
 
 ### Dynamic Setting Modes
 
-Dynamic settings currently support two modes.  In the source code, these are called "value programs", but that's
-just an implementation detail right now.
+Dynamic settings can currently implemented in two ways. The first of which is in the ini by specifying Defs for each wave and player count.
+The second of which is by using a function specifier.
 
 * `ini`
 * `bilinear;<function specifier>`
@@ -40,7 +41,6 @@ just an implementation detail right now.
 #### `ini` Dynamic Setting Configuration
 
 The special value "ini" makes a dynamic setting look in the config file for a table of values to use.
-
 
 CD appends the string "Defs" to the option name, then looks for one or more lines with that
 name in the config.  Here's an illustrative example that assumes short game length:
@@ -62,7 +62,7 @@ dimension, CD uses the bottommost or rightmost cell, respectively.  For example,
 above is used in a long game with 6 people.  MaxMonsters would progress from 26 on wave 1, to 28 on
 wave 2, to 32 on wave 3, to 36 on waves 4 through the rest of the game.
 
-Technically, this system even applies to boss waves, although most settings are not meaningful in
+Technically, this system even applies to boss waves, although most settings are not particularly meaningful in
 boss waves.  This system applies to boss waves mainly so that one `BossHPFakes` line is sufficient to
 control Boss HP no matter the gamelength, and to keep the system open to potential future options that
 might influence both boss and non-boss waves.
