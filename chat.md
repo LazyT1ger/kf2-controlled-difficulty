@@ -58,7 +58,7 @@ If set to true albino crawlers(Gas Crawlers) will be permitted to spawn if set i
 *Description:*
 If set to true Gorefiends will be permitted to spawn if set in the cycle, and if set to false they will be replaced with another zed should they exist in the spawncycle. The general function of this option is similar to the way albino alpha setting works.
 
-###!cdallhpfakes <int>
+### !cdallhpfakes <int>
 *Shorthand:* !cdahpf
 
 *Description:*
