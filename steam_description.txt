@@ -1,63 +1,99 @@
-[h1]Summary[/h1]
+Controlled Difficulty - Tiger's Build
+Last Updated: April 27th, 2018
+Last Tested: v1063
+Based on [url=http://steamcommunity.com/sharedfiles/filedetails/?id=738484519]Blackout's Controlled Difficulty[/url]
 
-This open source mod creates a custom game mode called ControlledDifficulty.CD_Survival.  This game mode stays close to TWI's vanilla gameplay, but puts you in control of aspects TWI hardcoded or made random.  CD can be configured to present much harder difficulty than Hell on Earth.  That is CD's main purpose.  However, CD is offers powerful configuration mechanisms, so it can also be configured to present easy difficulty, or exotic difficulties, such as large groups of infrequently spawning zeds (e.g. 64 zeds every 30 seconds).
+[h1][b]Summary[/b][/h1]
+This custom build takes everything you know and love about Blackout's Controlled Difficulty and adds some additional features, perhaps the most notable of which is the ready system and autopause which allows players to ready up eliminating the need to have someone on server with CDAUTH_WRITE permissions to pause and unpause between waves. This should also help eliminate or reduce erroneous unpauses that can cause wipes. Once every non-spectator is readied up the ready system will automatically unpause the trader and resume the countdown. In the event of something forgotten- If there are more than 5 seconds remaining on the countdown (or if you're playing in solo mode) players can un-ready in order pause the countdown again.
 
-[h1]Feature Overview[/h1]
+Combined with the ability to set TraderTime in your config (I recommend a low number, like 8 or 12 seconds) this should also make unmanaged pausing/unpausing available to public CD servers while also making it easier for managed CD groups.
 
-* Disabling the game conductor's variation of the zed spawn intensity and move speed
-* 'Faking' players; this increases the zed count (but not zed health) as though additional players were present
-* Setting an arbitrary, fixed spawn intensity, without conductor interference
-* Setting the max amount live zeds
-* Multiple parameters for fine-tuning the spawn system, allowing a continuum of spawnrates ranging from more than 192 zeds a second to less than one zed a second
-* Setting a SpawnCycle, which controls exactly which zeds spawn and in what order
-* Chat commands to read and modify the configuration
-* Configuring and/or pausing trader time
-* Displaying live stats after each wave showing the true spawnrate and squad/cohort count
-* Optionally automatically scaling difficulty parameters in response to playercount and wave number
-* Setting the dropped weapon timeout
-* Selectively disabling albino crawlers, alphas, and gorefasts
-* Optionally disabling the glitter-like alpha clot's red particle effects
-* Controlling whether fleshpounds are allowed to spawn already enraged
-* Controlling which boss spawns
+[h1][b]Additional Features[/b][/h1]
+In addition to everything offered by Blackout's Controlled Difficulty this fork includes the following additions and changes:
 
-[h1]Current Release Info[/h1]
+[list]
+[*] CD Chatbox output is now in ORANGE (blame Kore for giving me the idea)
+    I plan to add the option to change this to a custom color of your choosing in the future.
+[*] nam_pro_v5_plus spawncycle added to available presets
+[*] gso_v1 spawncycle added to available presets
+[*] fixes BossHPFakes not applying to Abomination and KingFleshpound
+[*] BossHPFakes are now listed in cdinfo output during and after bosswave
+[*] AutoPause
+    A simple feature that automagically pauses the trader at the end of each wave
+    [list]
+    [*] !cdautopause (shorthand: !cdap) chat command to enable or disable autopause
+    [*] config option to enable or disable AutoPause
+    [/list]
+[*] Ready System
+    Manages player ready/unready states and automates unpausing of trader time.
+    [list]
+    [*] !cdready (shorthand: !cdr) chat command to ready up for the next wave
+    [*] !cdunready (shorthand: !cdur) chat command to unready
+    [*] !cdusereadysystem (shorthand: !cdurs) chat command to turn the ready system on and off
+    [*] config option to turn the ready system on and off
+    [/list]
+[*] numerous !cdwho chat command functionality fixes and additions:
+    [list]
+    [*] no longer counts faked players as spectators
+    [*] no longer lists real players as spectators during trader time
+    [*] now correctly lists spectators prior to the start of wave 1
+    [*] now lists who is readied up and who is not during trader time (for use with ready system)
+    [/list]
+[*] !cdMyStats chat command
+    Displays a list of your current stats for the match including the following:
+    [list]
+    [*] Dosh Earned
+    [*] Large Kills
+    [*] Healing Given
+    [*] Healing Received
+    [*] Damage Dealt
+    [*] Damage Taken
+    [*] Shots Fired
+    [*] Shots Hit
+    [*] Accuracy (Measured as % of shots hit)
+    [*] Headshots
+    [/list]
+[*] !cdAllHpFakes chat command
+    allows players with CDAUTH_WRITE permissions to set HP fakes for Trash, Scrakes, Fleshpounds, and Boss to the same value all at once.
+[*] !cdWaveEndSummaries (Shorthand: !cdwes) chat command
+    toggles the display of wave end spawn summaries. Also available as a config option.
+[*] !cdstats command to display a sorted list of a specified stat for all connected players- Supported stats are:
+[list]
+[*] Accuracy
+[*] Dosh Earned
+[*] Damage Done
+[*] Heals Given
+[*] Headshots
+[*] Large Kills
+[/list]
+[/list]
 
-[b]Version[/b]: $MOD_VERSION
-[b]Date[/b]: $MOD_DATE
-[b]Last Tested KF2 Version[/b]: KF2 v1054
-[b]Source[/b]: https://github.com/notblackout/kf2-controlled-difficulty
+It should be noted that if someone who is not readied up leaves for whatever reason (Network disconnect, they were kicked, client crash, etc) and everyone left is readied up- the trader will not automatically unpause- this is an intended feature meant to safe-guard against unexpected problems that may arise. If that player isn't coming back you can trigger the ready-check again simply by having one player unready then ready back up.
 
-[h1]Installation[/h1]
+[h1][b]Links and Downloads:[/b][/h1]
+[h1]Tiger's Custom Build[/h1]
+[url=drive.google.com/open?id=1qUCDxh2BJjkOXcnBC-dSMil_nV6sCQbq]Alternate Download[/url]
+[url=github.com/LazyT1ger/kf2-controlled-difficulty/]Source on Git-Hub[/url]
+[h1]Blackout's Controlled Difficulty[/h1]
+[url=steamcommunity.com/sharedfiles/filedetails/?id=738484519]Workshop Page[/url]
+[url=github.com/notblackout/kf2-controlled-difficulty]Source on Git-Hub[/url]
 
-Click subscribe.  Restart the game if it is running (to make the game sync workshop items).  That's it.  You don't have to edit any files or manually download anything.
+[h1][b]Information:[/b][/h1]
+[url=steamcommunity.com/workshop/filedetails/discussion/1343978019/1696044439572613808/]FAQ[/url]
+[url=steamcommunity.com/workshop/filedetails/discussion/1343978019/1697169163397700871/]List of Chat Commands[/url]
+[url=steamcommunity.com/workshop/filedetails/discussion/1343978019/1696043806554396099/]Guides and Translations[/url]
+[url=steamcommunity.com/workshop/filedetails/discussion/1343978019/1698294337789841213/]Bug Reports[/url]
 
-To play, paste one of the console commands from the "getting started" documentation link below.
+[h1][b]Special Thanks:[/b][/h1]
+Blackout - for making Controlled Difficulty in the first place, and making the source readily available
+Kore - for helping test and debug
+Nam - for multiple bug reports and writing a guide in Korean
+Machine & Akathiiro313 - for writing a guide in Chinese
 
-[h1]Documentation[/h1]
+[h1][b]Finding CD Players and Servers[/b][/h1]
+I've put together a small group to help people find public CD servers and groups to play with in their region. There's still a fair bit of information to fill out and if you'd like your group or server added to the lists provided please feel free to comment below the list in each section with the appropriate information.
 
-[b] CD Manual Table of Contents: [/b]
+https://steamcommunity.com/groups/CD_Players_Hub
 
-(also at: https://github.com/notblackout/kf2-controlled-difficulty/blob/master/readme.md )
-
-* [url=https://github.com/notblackout/kf2-controlled-difficulty/blob/master/getting_started.md]Getting Started[/url]
-* [url=https://github.com/notblackout/kf2-controlled-difficulty/blob/master/recommended_cfg.md]Advice on CD configuration tuning[/url]
-* [url=https://github.com/notblackout/kf2-controlled-difficulty/blob/master/chat.md]Chat Command Reference[/url]
-* [url=https://github.com/notblackout/kf2-controlled-difficulty/blob/master/client_config.md]Client-side Config Options[/url]
-* [url=https://github.com/notblackout/kf2-controlled-difficulty/blob/master/console.md]Console Commands[/url]
-* [url=https://github.com/notblackout/kf2-controlled-difficulty/blob/master/dynamic_settings.md]Dynamic Settings Reference[/url]
-* [url=https://github.com/notblackout/kf2-controlled-difficulty/blob/master/faq.md]Frequently Asked Questions[/url]
-* [url=https://github.com/notblackout/kf2-controlled-difficulty/blob/master/options.md]Configuration Option Reference[/url]
-* [url=https://github.com/notblackout/kf2-controlled-difficulty/blob/master/server.md]Basic Server Setup[/url]
-* [url=https://github.com/notblackout/kf2-controlled-difficulty/blob/master/spawn.md]SpawnCycle reference[/url]
-
-[b]Chinese CD Tutorial[/b]
-
-The following tutorial, with lots of screenshots, was written by Xylona: https://tieba.baidu.com/p/5303880631.  Please direct feedback about it to Xylona [http://steamcommunity.com/id/oldbird/].  I'm unable to review it for accuracy.
-
-[h1]Special Thanks[/h1]
-
-Thanks to the following people for variously testing the mod, helping find bugs, or sharing their insight (this does not imply that they endorse the mod):
-
-dandyboy66, Fat Cat, Kore, mike5879, Nam, Trance, Skell
-
-All bugs are still my fault.
+[h1][b]IMPORTANT[/b][/h1]
+Please don't randomly add me on steam for questions or support. Instead ask here in the comments below, or start a discussion in the discussions section for this mod.
