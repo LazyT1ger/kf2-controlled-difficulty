@@ -195,6 +195,7 @@ private function InitSpawnCyclePresetList()
 	if ( 0 == SpawnCyclePresetList.length )
 	{
 		SpawnCyclePresetList.AddItem(new class'CD_SpawnCycle_Preset_albino_heavy');
+		SpawnCyclePresetList.AddItem(new class'CD_SpawnCycle_Preset_asl_v1');
 //		SpawnCyclePresetList.AddItem(new class'CD_SpawnCycle_Preset_basic_light');
 		SpawnCyclePresetList.AddItem(new class'CD_SpawnCycle_Preset_basic_moderate');
 		SpawnCyclePresetList.AddItem(new class'CD_SpawnCycle_Preset_basic_heavy');

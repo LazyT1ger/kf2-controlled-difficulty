@@ -43,22 +43,6 @@ enum ECDAuthLevel
 	CDAUTH_WRITE
 };
 
-struct StructCDPlayerStats
-{
-	var string PlayerName;
-	var int DoshEarned;
-	var int LargeKills;
-	var int HealsGiven;
-	var int HealsRecv;
-	var int DamageDealt;
-	var int DamageRecv;
-	var int ShotsFired;
-	var int ShotsHit;
-	var int HeadShots;
-	var float Accuracy;
-	var float HSAccuracy;
-};
-
 struct StructAuthorizedUsers
 {
 	var string SteamID;
@@ -548,13 +532,9 @@ var bool ZedsTeleportCloserBool;
 // and its unusual name is retained today for backwards-compatibility.
 var config bool bLogControlledDifficulty;
 
-
 ////////////////////////////////////////////////////////////////
 // Internal runtime state (no config options below this line) //
 ////////////////////////////////////////////////////////////////
-
-var array<StructCDPlayerStats> CDPlayerStats;
-
 
 var CD_DynamicSetting BossHPFakesSetting;
 var CD_DynamicSetting CohortSizeSetting;
@@ -622,6 +602,8 @@ var int PausedRemainingMinute;
 
 var CD_ChatCommander ChatCommander;
 
+var CD_StatsSystem StatsSystem;
+
 var int DebugExtraProgramPlayers;
 
 var string DynamicSettingsBulletin;
@@ -650,6 +632,7 @@ event InitGame( string Options, out string ErrorMessage )
 	ChatCommander = new(self) class'CD_ChatCommander';
 	ChatCommander.SetupChatCommands();
 
+	StatsSystem = new(self) class'CD_StatsSystem';
 	SaveConfig();
 }
 
@@ -1027,8 +1010,17 @@ private function string PauseTraderTime()
 
 	MyKFGRI.bStopCountDown = !MyKFGRI.bStopCountDown;
 
-	PausedRemainingTime = MyKFGRI.RemainingTime;
-	PausedRemainingMinute = MyKFGRI.RemainingMinute;
+	if (bAutoPause && MyKFGRI.RemainingTime >= 60)
+	{
+		PausedRemainingTime = 60;
+		PausedRemainingMinute = 0;
+	}
+	else
+	{
+		PausedRemainingTime = MyKFGRI.RemainingTime;
+		PausedRemainingMinute = MyKFGRI.RemainingMinute;
+	}
+	
 	ClearTimer( 'CloseTraderTimer' );
 	`cdlog("Killed CloseTraderTimer", bLogControlledDifficulty);
 
@@ -1111,7 +1103,7 @@ private function ReadyUp(Actor Sender)
 			{
 				CDPC.bIsReadyForNextWave = true;
 				BroadCastCDEcho( KFPC.PlayerReplicationInfo.PlayerName $ " has readied up." );
-				if( AllPlayersAreReady() )
+				if( bAllPlayersAreReady() )
 				{
 					BroadCastCDEcho( "All Players are ready. Unpausing Trader." );
 					UnpauseTraderTime();
@@ -1176,7 +1168,7 @@ private function Unready(Actor Sender)
 }
 
 // Tallies up players and returns true if all non-spectators are ready
-private function bool AllPlayersAreReady()
+private function bool bAllPlayersAreReady()
 {
     local KFPlayerController KFPC;
 	local CD_PlayerController CDPC;
@@ -1245,363 +1237,7 @@ private function UnreadyAllPlayers()
 	BroadcastCDEcho( "Type \"!cdready\" or \"!cdr\" to ready up for the next wave." );
 }
 
-//////////////////////////////
-// CD PLAYER STATS FEATURES //
-//////////////////////////////
-/*
- * This stuff should really be in it's own class
- & but i'm lazy so i'll do it later.
- */
 
-function string CDStatsCommand(string CommandString)
-{
-	local array<string> params;
-	local string Stat;
-	local string Output;
-	local int i;
-	
-	ParseStringIntoArray( CommandString, params, " ", true );
-	Stat = Locs(params[1]);
-	
-	// refresh CDPlayerStats array
-	GetCDPlayerStats();	
-	
-	// note: this is a messy looking implementation, but functional.
-	// 		 I wouldn't rule out future optimization.
-	
-	if ( WaveNum < 1 )
-	{
-		return ("The crystal ball is broken. Try again after the first wave has started.");
-	}
-	
-	if (Left( Stat, 3 ) == "acc")
-	{
-		CDPlayerStats.Sort(ByAccuracy);
-		
-		Output = "--- Accuracy ------------------------------------------";
-		
-		for (i = 0; i < CDPlayerStats.Length; i++)
-		{
-			Output = Output $ "\n" $ i+1 $ ") - " $ round(CDPlayerStats[i].Accuracy) $ "% [F:" $ CDPlayerStats[i].ShotsFired $ "/H:" $ CDPlayerStats[i].ShotsHit $ "] HS: " $ round(CDPlayerStats[i].HSAccuracy) $ "% - " $ CDPlayerStats[i].PlayerName ;
-		}
-		
-	}
-	else if (Left( Stat, 4 ) == "dama" || Stat == "dmg")
-	{		
-		CDPlayerStats.Sort(ByDamageDealt);
-		
-		Output = "--- Damage Dealt ----------------------------------";
-		
-		for (i = 0; i < CDPlayerStats.Length; i++)
-		{
-			Output = Output $ "\n" $ i+1 $ ") - " $ CDPlayerStats[i].DamageDealt $ " - " $ CDPlayerStats[i].PlayerName ;
-		}
-	}
-	else if (Left( Stat, 4 ) == "dosh")
-	{
-		CDPlayerStats.Sort(ByDoshEarned);
-		
-		Output = "-- Dosh Earned ---------------------------------------";
-		
-		for (i = 0; i < CDPlayerStats.Length; i++)
-		{		
-			Output = Output $ "\n" $ i+1 $ ") - " $ CDPlayerStats[i].DoshEarned $ " - " $ CDPlayerStats[i].PlayerName ;
-		}
-	}
-	else if (Left( Stat, 4 ) == "head" || Stat == "hs")
-	{
-		CDPlayerStats.Sort(ByHeadshots);
-		
-		Output = "-- Headshots ------------------------------------------";
-
-		for (i = 0; i < CDPlayerStats.Length; i++)
-		{
-			Output = Output $ "\n" $ i+1 $ ") - " $ CDPlayerStats[i].Headshots $ "[" $ round(CDPlayerStats[i].HSAccuracy) $ "%] - " $ CDPlayerStats[i].PlayerName ;
-		}
-	}
-	else if (Left( Stat, 4 ) == "heal")
-	{
-		CDPlayerStats.Sort(ByHealsGiven);
-		
-		Output = "-- Heals Given ----------------------------------------";
-		
-		for (i = 0; i < CDPlayerStats.Length; i++)
-		{
-			Output = Output $ "\n" $ i+1 $ ") - " $ CDPlayerStats[i].HealsGiven $ " - " $ CDPlayerStats[i].PlayerName ;
-		}
-	}
-	else if (Left( Stat, 4 ) == "larg")
-	{
-		CDPlayerStats.Sort(ByLargeKills);
-		
-		Output = "-- Large Kills -------------------------------------------";
-		
-		for (i = 0; i < CDPlayerStats.Length; i++)
-		{
-			Output = Output $ "\n" $ i+1 $ ") - " $ CDPlayerStats[i].LargeKills $ " - " $ CDPlayerStats[i].PlayerName ;
-		}
-	}
-	/*
-	 * joke stat not to actually be included in release
-	 * 
-	else if (Left( Stat, 5 ) == "skill")
-	{
-		// It wouldn't be Tiger's CD Build without some obligatory sass.
-		Output = "-- Skill -----------------------------------------------------";
-		
-		for (i = 0; i < CDPlayerStats.Length; i++)
-		{
-			Output = Output $ "\n" $ i+1 $ ") player \"" $ CDPlayerStats[i].PlayerName $ "\" has no skill." ;
-		}
-	}
-	*/
-	else
-	{
-		Output = "PEBCAK- Unrecognized Statistic \" " $ Stat $" \". Available stats are:\nAccuracy, Damage, Dosh Earned, HeadShots, Healing, and Large Kills";
-	}
-	
-	return Output;
-}
-
-// NOTE: This code can probably be improved so that only one sort function is needed
-
-// #### ByAccuracy
-// Sorting for playerstats structs within array
-private function int ByAccuracy( StructCDPlayerStats a, StructCDPlayerStats b )
-{
-	local int x;
-	local int y;
-	
-	x = a.Accuracy;
-	y = b.Accuracy;
-
-	if ( x < y )
-	{
-		return -1;
-	}
-	else if ( x > y )
-	{
-		return 1;
-	}
-	return 0;
-}
-
-
-// #### ByDamageDealt
-// Sorting for playerstats structs within array
-private function int ByDamageDealt( StructCDPlayerStats a, StructCDPlayerStats b )
-{
-	local int x;
-	local int y;
-	
-	x = a.DamageDealt;
-	y = b.DamageDealt;
-
-	if ( x < y )
-	{
-		return -1;
-	}
-	else if ( x > y )
-	{
-		return 1;
-	}
-	return 0;
-}
-
-// #### ByDoshEarned
-// Sorting for playerstats structs within array
-private function int ByDoshEarned( StructCDPlayerStats a, StructCDPlayerStats b )
-{
-	local int x;
-	local int y;
-	
-	x = a.DoshEarned;
-	y = b.DoshEarned;
-
-	if ( x < y )
-	{
-		return -1;
-	}
-	else if ( x > y )
-	{
-		return 1;
-	}
-	return 0;
-}
-
-// #### ByHeadshots
-// Sorting for playerstats structs within array
-private function int ByHeadshots( StructCDPlayerStats a, StructCDPlayerStats b )
-{
-	local int x;
-	local int y;
-	
-	x = a.Headshots;
-	y = b.Headshots;
-
-	if ( x < y )
-	{
-		return -1;
-	}
-	else if ( x > y )
-	{
-		return 1;
-	}
-	return 0;
-}
-
-// #### ByHealsGiven
-// Sorting for playerstats structs within array
-private function int ByHealsGiven( StructCDPlayerStats a, StructCDPlayerStats b )
-{
-	local int x;
-	local int y;
-	
-	x = a.HealsGiven;
-	y = b.HealsGiven;
-
-	if ( x < y )
-	{
-		return -1;
-	}
-	else if ( x > y )
-	{
-		return 1;
-	}
-	return 0;
-}
-
-// #### ByLargeKills
-// Sorting for playerstats structs within array
-private function int ByLargeKills( StructCDPlayerStats a, StructCDPlayerStats b )
-{
-	local int x;
-	local int y;
-	
-	x = a.LargeKills;
-	y = b.LargeKills;
-
-	if ( x < y )
-	{
-		return -1;
-	}
-	else if ( x > y )
-	{
-		return 1;
-	}
-	return 0;
-}
-
-// #### GetCDPlayerStats
-//
-// We call this function to empty and repopulate the CDPlayerStats array with fresh
-// data from all connected players.
-function GetCDPlayerStats()
-{
-	local KFPlayerController KFPC;
-	local StructCDPlayerStats srs;
-	
-	CDPlayerStats.Length = 0;
-	
-	foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
-	{
-		if ( KFPC != none && KFPC.bIsPlayer && !KFPC.PlayerReplicationInfo.bOnlySpectator && !KFPC.bDemoOwner )
-		{
-			srs.PlayerName = KFPC.PlayerReplicationInfo.PlayerName;
-			srs.DoshEarned = KFPC.MatchStats.TotalDoshEarned + KFPC.MatchStats.GetDoshEarnedInWave();
-			srs.LargeKills = KFPC.MatchStats.TotalLargeZedKills;
-			srs.HealsGiven = KFPC.MatchStats.TotalAmountHealGiven + KFPC.MatchStats.GetHealGivenInWave();
-			srs.HealsRecv  = KFPC.MatchStats.TotalAmountHealReceived + KFPC.MatchStats.GetHealReceivedInWave();
-			srs.DamageDealt= KFPC.MatchStats.TotalDamageDealt + KFPC.MatchStats.GetDamageDealtInWave();
-			srs.DamageRecv = KFPC.MatchStats.TotalDamageTaken + KFPC.MatchStats.GetDamageTakenInWave();
-			srs.ShotsFired = KFPC.ShotsFired;
-			srs.ShotsHit   = KFPC.ShotsHit;
-
-			// use toggle hs count per pellet or per shot
-			// gameconductor uses per pellet but end of match award screen uses per shot
-			if (bCountHeadshotsPerPellet)
-			{
-				srs.Headshots  = KFPC.ShotsHitHeadshot;
-			}
-			else
-			{
-				srs.HeadShots  = KFPC.MatchStats.TotalHeadShots + KFPC.MatchStats.GetHeadShotsInWave();
-			}
-			
-			// prevent negative accuracy percentages
-			if (srs.ShotsFired > 0 && srs.ShotsHit > 0)
-			{
-				srs.Accuracy   = round(Float(srs.ShotsHit)/Float(srs.ShotsFired) * 100.0);
-				srs.HSAccuracy = round(Float(srs.Headshots)/Float(srs.ShotsHit) * 100.0);
-			}
-			else
-			{
-				srs.Accuracy   = 0;
-				srs.HSAccuracy = 0;
-			}
-			
-			CDPlayerStats.AddItem( srs );
-		}
-	}
-}
-
-
-/*
- * called by !cdmystats command, since we can't use local vars in an event
- * These stats are already collected for us through EphemeralMatchStats for GameConductor
- * and end of match awards so we might as well make them available to players on request.
- */
-private function GetPlayerStats(Actor Sender)
-{
-	local KFPlayerController KFPC;
-	local string PlayerStats;
-	
-	local int DoshEarned,
-			  LargeKills,
-			  HealsGiven,
-			  HealsRecv,
-			  DamageDealt,
-			  DamageRecv,
-			  ShotsFired,
-			  ShotsHit,
-			  HeadShots;
-			  
-	KFPC = KFPlayerController(Sender);
-	PlayerStats = "";
-	
-	if (!KFPC.PlayerReplicationInfo.bOnlySpectator)
-	{
-		DoshEarned = KFPC.MatchStats.TotalDoshEarned + KFPC.MatchStats.GetDoshEarnedInWave();
-		LargeKills = KFPC.MatchStats.TotalLargeZedKills;
-		HealsGiven = KFPC.MatchStats.TotalAmountHealGiven + KFPC.MatchStats.GetHealGivenInWave();
-		HealsRecv  = KFPC.MatchStats.TotalAmountHealReceived + KFPC.MatchStats.GetHealReceivedInWave();
-		DamageDealt= KFPC.MatchStats.TotalDamageDealt + KFPC.MatchStats.GetDamageDealtInWave();
-		DamageRecv = KFPC.MatchStats.TotalDamageTaken + KFPC.MatchStats.GetDamageTakenInWave();
-		ShotsFired = KFPC.ShotsFired;
-		ShotsHit   = KFPC.ShotsHit;	
-		
-		if (bCountHeadshotsPerPellet)
-		{
-			Headshots = KFPC.ShotsHitHeadshot;
-		}
-		else
-		{
-			HeadShots  = KFPC.MatchStats.TotalHeadShots + KFPC.MatchStats.GetHeadShotsInWave();
-		}
-		
-		PlayerStats = "Stats for " $ KFPC.PlayerReplicationInfo.PlayerName $ ": \n" $
-			"Dosh Earned:" $ DoshEarned $ " Large Kills: " $ LargeKills $ "\n" $
-		    "Heals - Given: " $ HealsGiven $ " Received: " $ HealsRecv $ "\n" $
-			"Damage - Dealt: " $ DamageDealt $ " Taken: " $ DamageRecv $ "\n" $
-			"Shots - Fired: " $ ShotsFired $ " Hit: " $ ShotsHit $ "(" $ round(Float(ShotsHit)/Float(ShotsFired) * 100.0) $ "%) HS: " $ HeadShots $ "(" $ round(Float(HeadShots)/Float(ShotsHit) * 100.0) $ "%)";
-		
-		BroadCastCDEcho( PlayerStats );
-	}
-	else
-	{	// Provide obligatory sass to people using this command when they shouldn't.
-		BroadCastCDEcho( "You've spectated really hard, but that doesn't count for anything." );
-	}
-}
 
 /* 
  * We override PreLogin to disable a comically overzealous
@@ -1764,9 +1400,12 @@ final function int GetEffectivePlayerCount( int HumanPlayers )
 
 /*
  * Get the playercount applied to a specific zed's HP scaling.  This accounts
- * for FakesMode and whichever Boss/Fleshpound/Scrake/TrashHPFakes option is
+ * for FakesMode and whichever Boss/Fleshpound/Scrake/Quarterpound/TrashHPFakes option is
  * applicable.
-  */
+ *
+ * This was rewritten from blackout's version to require less evaluation and correctly apply
+ * BossHPFakes to Abomination and KingFleshpound while also adding QuarterpoundHPFakes.
+ */
 final function int GetEffectivePlayerCountForZedType( KFPawn_Monster P, int HumanPlayers )
 {
 	local int FakeValue, EffectiveNumPlayers;
@@ -1890,26 +1529,26 @@ event Broadcast(Actor Sender, coerce string Msg, optional name Type)
 		{
 			ReadyUp(Sender);
 		}
-		else if ( Left( Msg, 8 ) == "!cdstats")
-		{
-			BroadcastCDEcho(CDStatsCommand(Msg));
+		else if ( Left( Msg, 8 ) == "!cdstats")				// this could probably be passed through chatcommander
+		{													// but I'm still debating gutting stats and making it a separate mutator
+			BroadcastCDEcho(StatsSystem.CDStatsCommand(Msg));
 		}
 		else if (Msg == "!cdunready" || Msg == "!cdur")
 		{
 			Unready(Sender);
 		}
-		else if (Msg == "!cdmikepls" )
-		{
-			BroadcastCDEcho("<ALL> mike5879: GET SHIT ON", "ffffff");
-		}
 		else if (Msg == "!cdmystats" || Msg == "!cdms")
 		{
-			GetPlayerStats(Sender);
+			BroadcastCDEcho(StatsSystem.GetIndividualPlayerStats(Sender));
 		}
 		else if ( Left( Msg, 13 ) == "!cdallhpfakes" || Left( Msg, 7 ) == "!cdahpf" )   // hey this one doesn't really need an actor, I'm just being lazy at this point.
 		{			
 			SetAllHPFakes(Sender, Msg);
-		}	
+		}
+		else if (Msg == "!cdmikepls" )													// this doesn't need an actor either -The Real LazyTiger
+		{
+			BroadcastCDEcho("GET SHIT ON");
+		}
 		else
 		{
 			ChatCommander.RunCDChatCommandIfAuthorized( Sender, Msg );
@@ -1981,6 +1620,11 @@ function WaveEnded( EWaveEndCondition WinCondition )
 	if (bEnableReadySystem && WinCondition != WEC_TeamWipedOut && WinCondition != WEC_GameWon )
 	{
 		UnreadyAllPlayers();
+	}
+	// dump stats to chatlog so they can be parsed.
+	if (WinCondition == WEC_TeamWipedOut || WinCondition == WEC_GameWon )
+	{
+		BroadcastCDEcho( StatsSystem.DumpToChatlog() );
 	}
 }
 
