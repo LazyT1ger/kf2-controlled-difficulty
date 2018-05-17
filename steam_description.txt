@@ -1,7 +1,10 @@
 Controlled Difficulty - Tiger's Build
-Last Updated: April 27th, 2018
-Last Tested: v1063
+Last Updated: May 17th, 2018
+Last Tested: v1065
 Based on [url=http://steamcommunity.com/sharedfiles/filedetails/?id=738484519]Blackout's Controlled Difficulty[/url]
+
+[h1][b]IMPORTANT NOTE[/b][/h1]
+This is the last offical update of my branch of CD. Tripwire has offically decided that game balance doesn't matter to them and I've decided that maintaining a mutator for their unbalanced game is not worth the effort. This branch of CD like the original is open source and can be forked and maintained by someone else if they so choose. It's also written with the ability to be  merged into Blackout's main branch in mind if he so chooses. Never-the-less, this build currently works with both the published 1064 and the beta 1065, it however will not be updated for future versions of KillingFloor2.
 
 [h1][b]Summary[/b][/h1]
 This custom build takes everything you know and love about Blackout's Controlled Difficulty and adds some additional features, perhaps the most notable of which is the ready system and autopause which allows players to ready up eliminating the need to have someone on server with CDAUTH_WRITE permissions to pause and unpause between waves. This should also help eliminate or reduce erroneous unpauses that can cause wipes. Once every non-spectator is readied up the ready system will automatically unpause the trader and resume the countdown. In the event of something forgotten- If there are more than 5 seconds remaining on the countdown (or if you're playing in solo mode) players can un-ready in order pause the countdown again.
@@ -13,7 +16,7 @@ In addition to everything offered by Blackout's Controlled Difficulty this fork 
 
 [list]
 [*] CD Chatbox output is now in ORANGE (blame Kore for giving me the idea)
-    I plan to add the option to change this to a custom color of your choosing in the future.
+[*] asl_v1 spawncycle added to available presets
 [*] nam_pro_v5_plus spawncycle added to available presets
 [*] gso_v1 spawncycle added to available presets
 [*] fixes BossHPFakes not applying to Abomination and KingFleshpound
@@ -61,11 +64,17 @@ In addition to everything offered by Blackout's Controlled Difficulty this fork 
 [list]
 [*] Accuracy
 [*] Dosh Earned
-[*] Damage Done
-[*] Heals Given
+[*] DamageDealt
+[*] DamageTaken
+[*] HealsGiven
+[*] HealsReceived
 [*] Headshots
+[*] HeadshotAccuracy
 [*] Large Kills
+[*] ShotsHit
+[*] ShotsFired
 [/list]
+[*] Added a feature that unobtrusively dumps stats for all players at the end of a match to the chatlog so that it can readily be parsed by tools like MagickedAdmin into Key:Value pairs.
 [/list]
 
 It should be noted that if someone who is not readied up leaves for whatever reason (Network disconnect, they were kicked, client crash, etc) and everyone left is readied up- the trader will not automatically unpause- this is an intended feature meant to safe-guard against unexpected problems that may arise. If that player isn't coming back you can trigger the ready-check again simply by having one player unready then ready back up.
