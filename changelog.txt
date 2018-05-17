@@ -1,3 +1,22 @@
+Tiger's Build - 2018-05-17
+---------------------------------
+- added ASL_V1 spawncycle preset
+- moved cdstats code to a separate class.
+- readded 60 second limit to TraderTime value while ready system is enabled
+	this was a failsafe intended to prevent needlessly long waits after
+	everyone has readied up. It's inclusion was overlooked during a previous
+	rewrite of the autopause system.
+- added !cdstats DamageTaken
+- added !cdstats HealsReceived
+- changed !cdstats HealingGiven command to !cdstats HealsGiven
+- adjusted output of !cdstats accuracy
+- added !cdstats HeadshotAccuracy
+- added !cdstats ShotsFired
+- added !cdstats ShotsHit
+- added unobtrusive chatlog output for stats at the end of match so projects like MajickedAdmin can parse and persistantly store playerstats exposed by this system in addition to the stats they already store.
+- adjusted !cdmikepls chat command output
+
+
 Tiger's Build - 2018-04-27
 ---------------------------------
 - Fixed HPFakes not applying correctly to KingFleshpound (bug inherited from CD Master Branch)
@@ -14,6 +33,7 @@ Tiger's Build - 2018-04-27
 - Added !cdCountHeadshotsPerPellet (Shorthand !cdchspp) chat command and config option to toggle how headshots are counted (per pellet or per shot)
 - Added headshot accuracy % to cdmystats output
 
+
 Tiger's Build - 2018-04-18
 ---------------------------------
 - Fixed BossHPFakes not applying to Abomination (bug inherited from CD Master Branch)
@@ -22,6 +42,7 @@ Tiger's Build - 2018-04-18
 - Added large kills to cdmystats output
 - Added BossHPfakes to cdinfo breif output (on bosswave only)
 - Adjusted CDWho output (again)
+
 
 Tiger's Build - 2018-04-13
 ---------------------------------
@@ -38,6 +59,7 @@ Tiger's Build - 2018-04-13
 - fixed a bug where Boss Cinematics could break or get 'stuck' on screen.
 - potentially fixed a bug where players joining during trader time would trigger TWI's delayed login and cause it to take ~30 seconds to actually spawn in.
 
+
 Tiger's Build - 2018-04-11
 ---------------------------------
 - added Spawncycle Preset Nam_Pro_v5_Plus
@@ -48,18 +70,21 @@ Tiger's Build - 2018-04-11
 - reduced evaluation required for some commands
 - updated versioning information for easier reference
 
+
 Tiger's Build - 2018-04-03
 ---------------------------------
 - fixed an issue where GetPlayerNumMaxAIModifier() could pass the wrong value to GetEffectivePlayerCount()
   which in turn disrupted calculations for wavesizefakes if fakesmode was set to add.
 
-Tiger's Build - 2018-03-28
+
+ Tiger's Build - 2018-03-28
 ---------------------------------
 - made ready and unready commands case insensitive
 - set TraderTime default value in config to 12 (will be helpful for clean installs)
 - added unready AutoPause notice
 - added !cdready chat command notification to initial autopause prompt
 - added/adjusted chat spaff to reduce confusion
+
 
 Tiger's Build - 2018-03-27
 ---------------------------------
