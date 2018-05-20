@@ -184,6 +184,7 @@ Sets the SpawnCycle to be used for determining zed spawns. If used without an ar
 
 The list of available SpawnCycle Presets included with this version of CD is as follows:
 * albino_heavy
+* asl_v1
 * basic_heavy
 * basic_light
 * basic_moderate
@@ -228,11 +229,16 @@ The timer interval, in seconds, for CD's SpawnManager's update function. The upd
 displays an ordered list specific stats for all connected players
 accepted stat names:
 * Accuracy
-* Dosh Earned
-* Damage Done
-* Heals Given
+* DoshEarned
+* DamageDealt
+* DamageTaken
+* HealsGiven
+* HealsReceived
 * Headshots
-* Large Kills
+* HeadShotAccuracy
+* LargeKills
+* ShotsFired
+* ShotsHit
 
 ### !cdtrashhpfakes <ini|bilinear;|int>
 *Shorthand:* !cdthpf
