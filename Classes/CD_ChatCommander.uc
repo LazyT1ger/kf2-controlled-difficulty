@@ -161,20 +161,6 @@ function SetupChatCommands()
 
 	ChatCommands.Length = 0;
 
-	// Setup MikePls command
-	n.Length = 1;
-	h.Length = 0;
-	n[0] = "!cdmikepls";
-	scc.Names = n;
-	scc.ParamHints = h;
-	scc.NullaryImpl = mikepls;
-	scc.ParamsImpl = None;
-	scc.CDSetting = None;
-	scc.Description = "";
-	scc.AuthLevel = CDAUTH_WRITE;
-	scc.ModifiesConfig = false;
-	ChatCommands.AddItem( scc );
-	
 	// Setup pause commands
 	n.Length = 2;
 	h.Length = 0;
@@ -330,20 +316,6 @@ private function string GetCDInfoChatStringDefault()
 private function string GetCDInfoChatStringCommand( const out array<string> params)
 {
 	return GetCDInfoChatString( params[0] );
-}
-
-function string mikepls()
-{
-	local KFPlayerController KFPC;
-	
-	foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
-	{
-		if (KFPC != none && KFPC.bIsPlayer )
-		{
-			KFPC.MyGFxHUD.HudChatBox.AddChatMessage("<ALL> mike5879: GET SHIT ON", "ffffff");
-		}
-	}
-	return "";
 }
 
 function string GetCDInfoChatString( const string Verbosity )
