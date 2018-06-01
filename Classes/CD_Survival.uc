@@ -1583,7 +1583,7 @@ private function SetAllHPFakes(Actor Sender, string Msg)
  * on that client's configuration.
  */
  
-function BroadcastCDEcho( coerce string MsgStr, optional string MsgColor)
+function BroadcastCDEcho( coerce string MsgStr )
 {
 	local PlayerController PC;
 	
